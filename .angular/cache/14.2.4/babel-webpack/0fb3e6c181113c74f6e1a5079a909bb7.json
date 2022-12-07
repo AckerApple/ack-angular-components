@@ -1,0 +1,1 @@
+{"ast":null,"code":"export const path = {\n  join: (...args) => {\n    return args.filter(value => value.length).join('/');\n  }\n};","map":null,"metadata":{},"sourceType":"module"}
