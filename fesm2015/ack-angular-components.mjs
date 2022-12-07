@@ -479,5 +479,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "14.2.4", ngImpor
  * Generated bundle index. Do not edit.
  */
 
-export { AckComponentsModule, RobustSelectDirectoryComponent, declarations$1 as declarations };
+export { AckComponentsModule, RobustSelectDirectoryComponent, declarations$1 as declarations, path };
 //# sourceMappingURL=ack-angular-components.mjs.map
