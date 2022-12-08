@@ -34,7 +34,11 @@ export class SafariDirectoryManager implements DirectoryManager {
       .map(file => file.name)
   }
 
-  async listFiles(): Promise<DmFileReader[]> {
+  async listFiles(): Promise<string[]> {
+    return this.getRelativeItems().map(file => file.name)
+  }
+
+  async getFiles(): Promise<DmFileReader[]> {
     return this.getRelativeItems().map(file => new BrowserDmFileReader(file, this))
   }
 

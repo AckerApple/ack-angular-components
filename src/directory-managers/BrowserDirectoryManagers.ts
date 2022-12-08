@@ -84,17 +84,14 @@ export class BrowserDirectoryManager implements DirectoryManager {
       .map(file => file.name)
   }
   
-  async listFiles(): Promise<DmFileReader[]> {
+  async listFiles(): Promise<string[]> {
+    return this.files.filter(file => file.kind === 'file')
+      .map(file => file.name)
+  }
+  
+  async getFiles(): Promise<DmFileReader[]> {
     return this.files.filter(file => file.kind === 'file')
       .map(file => new BrowserDmFileReader(file, this))
-    /*
-    const filePromises: Promise<FileSystemFileHandle>[] = this.files
-      .filter(file => file.kind === 'file')
-      .map(async file => this.getSystemFile(file))
-    
-    return (await Promise.all(filePromises))
-      .map(file => new BrowserDmFileReader(file))
-    */
   }
 
   async getDirectory(
