@@ -116,7 +116,7 @@ class BrowserDirectoryManager {
         return this.files.map(file => file.name);
     }
     async listFolders() {
-        return this.files.filter(file => file.kind && file.kind !== 'directory')
+        return this.files.filter(file => file.kind && file.kind === 'directory')
             .map(file => file.name);
     }
     async listFiles() {

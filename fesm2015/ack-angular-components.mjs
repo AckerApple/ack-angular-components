@@ -148,7 +148,7 @@ class BrowserDirectoryManager {
     }
     listFolders() {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.files.filter(file => file.kind && file.kind !== 'directory')
+            return this.files.filter(file => file.kind && file.kind === 'directory')
                 .map(file => file.name);
         });
     }
