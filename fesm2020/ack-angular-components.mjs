@@ -115,18 +115,10 @@ class BrowserDirectoryManager {
     async list() {
         return this.files.map(file => file.name);
     }
-    /*
-    private getSystemFile(
-      file: FileSystemFileHandle
-    ): Promise<FileSystemFileHandle> {
-      return Promise.resolve(file)
-      
-      // load browser file WITH connected permissions
-      //return this.directoryHandler.getFileHandle(file.name)
-      
-      // load browser file but with no connected permissions
-      // return file.getFile ? await file.getFile() : file as any
-    }*/
+    async listFolders() {
+        return this.files.filter(file => file.kind && file.kind !== 'directory')
+            .map(file => file.name);
+    }
     async listFiles() {
         return this.files.filter(file => file.kind === 'file')
             .map(file => new BrowserDmFileReader(file, this));
@@ -219,6 +211,11 @@ class NeutralinoDirectoryManager {
         const reads = await Neutralino.filesystem.readDirectory(this.path);
         return reads.filter(read => !['.', '..'].includes(read.entry)).map(read => read.entry);
     }
+    async listFolders() {
+        const reads = await Neutralino.filesystem.readDirectory(this.path);
+        return reads.filter(read => !['.', '..'].includes(read.entry) && read.type === 'DIRECTORY')
+            .map(read => read.entry);
+    }
     async listFiles() {
         const reads = await Neutralino.filesystem.readDirectory(this.path);
         return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
@@ -261,6 +258,11 @@ class SafariDirectoryManager {
     }
     async list() {
         return this.getRelativeItems().map(file => file.name);
+    }
+    async listFolders() {
+        return this.getRelativeItems()
+            .filter(file => file.name.split('.').length === 1)
+            .map(file => file.name);
     }
     async listFiles() {
         return this.getRelativeItems().map(file => new BrowserDmFileReader(file, this));

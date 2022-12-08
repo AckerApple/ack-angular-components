@@ -146,18 +146,12 @@ class BrowserDirectoryManager {
             return this.files.map(file => file.name);
         });
     }
-    /*
-    private getSystemFile(
-      file: FileSystemFileHandle
-    ): Promise<FileSystemFileHandle> {
-      return Promise.resolve(file)
-      
-      // load browser file WITH connected permissions
-      //return this.directoryHandler.getFileHandle(file.name)
-      
-      // load browser file but with no connected permissions
-      // return file.getFile ? await file.getFile() : file as any
-    }*/
+    listFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.files.filter(file => file.kind && file.kind !== 'directory')
+                .map(file => file.name);
+        });
+    }
     listFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.files.filter(file => file.kind === 'file')
@@ -262,6 +256,13 @@ class NeutralinoDirectoryManager {
             return reads.filter(read => !['.', '..'].includes(read.entry)).map(read => read.entry);
         });
     }
+    listFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const reads = yield Neutralino.filesystem.readDirectory(this.path);
+            return reads.filter(read => !['.', '..'].includes(read.entry) && read.type === 'DIRECTORY')
+                .map(read => read.entry);
+        });
+    }
     listFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             const reads = yield Neutralino.filesystem.readDirectory(this.path);
@@ -313,6 +314,13 @@ class SafariDirectoryManager {
     list() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.getRelativeItems().map(file => file.name);
+        });
+    }
+    listFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.getRelativeItems()
+                .filter(file => file.name.split('.').length === 1)
+                .map(file => file.name);
         });
     }
     listFiles() {
