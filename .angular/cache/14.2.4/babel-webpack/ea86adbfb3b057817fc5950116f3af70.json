@@ -1,1 +1,0 @@
-{"ast":null,"code":"export function stringToXml(string) {\n  const parser = new DOMParser();\n  const result = parser.parseFromString(string.trim(), \"text/xml\");\n  return result;\n}","map":null,"metadata":{},"sourceType":"module"}
