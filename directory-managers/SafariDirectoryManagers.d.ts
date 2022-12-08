@@ -9,6 +9,7 @@ export declare class SafariDirectoryManager implements DirectoryManager {
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;
     listFiles(): Promise<string[]>;
+    getFolders(): Promise<SafariDirectoryManager[]>;
     getFiles(): Promise<DmFileReader[]>;
     findFileByPath(filePath: string): Promise<BrowserDmFileReader | undefined>;
     file(fileName: string, _options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;

@@ -158,6 +158,12 @@ class BrowserDirectoryManager {
                 .map(file => file.name);
         });
     }
+    getFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Promise.all(this.files.filter(file => file.kind && file.kind === 'directory')
+                .map((file) => __awaiter(this, void 0, void 0, function* () { return yield this.getDirectory(file.name); })));
+        });
+    }
     getFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.files.filter(file => file.kind === 'file')
@@ -268,6 +274,11 @@ class NeutralinoDirectoryManager {
                 .map(read => read.entry);
         });
     }
+    getFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Promise.all((yield this.listFolders()).map((name) => __awaiter(this, void 0, void 0, function* () { return yield this.getDirectory(name); })));
+        });
+    }
     getFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             const reads = yield Neutralino.filesystem.readDirectory(this.path);
@@ -331,6 +342,11 @@ class SafariDirectoryManager {
     listFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.getRelativeItems().map(file => file.name);
+        });
+    }
+    getFolders() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return Promise.all((yield this.listFolders()).map((name) => __awaiter(this, void 0, void 0, function* () { return yield this.getDirectory(name); })));
         });
     }
     getFiles() {

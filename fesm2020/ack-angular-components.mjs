@@ -123,6 +123,10 @@ class BrowserDirectoryManager {
         return this.files.filter(file => file.kind === 'file')
             .map(file => file.name);
     }
+    async getFolders() {
+        return Promise.all(this.files.filter(file => file.kind && file.kind === 'directory')
+            .map(async (file) => await this.getDirectory(file.name)));
+    }
     async getFiles() {
         return this.files.filter(file => file.kind === 'file')
             .map(file => new BrowserDmFileReader(file, this));
@@ -217,6 +221,9 @@ class NeutralinoDirectoryManager {
         return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
             .map(read => read.entry);
     }
+    async getFolders() {
+        return Promise.all((await this.listFolders()).map(async (name) => await this.getDirectory(name)));
+    }
     async getFiles() {
         const reads = await Neutralino.filesystem.readDirectory(this.path);
         return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
@@ -267,6 +274,9 @@ class SafariDirectoryManager {
     }
     async listFiles() {
         return this.getRelativeItems().map(file => file.name);
+    }
+    async getFolders() {
+        return Promise.all((await this.listFolders()).map(async (name) => await this.getDirectory(name)));
     }
     async getFiles() {
         return this.getRelativeItems().map(file => new BrowserDmFileReader(file, this));
