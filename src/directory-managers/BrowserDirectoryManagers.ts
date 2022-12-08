@@ -78,19 +78,11 @@ export class BrowserDirectoryManager implements DirectoryManager {
   async list(): Promise<string[]> {
     return this.files.map(file => file.name)
   }
-
-  /*
-  private getSystemFile(
-    file: FileSystemFileHandle
-  ): Promise<FileSystemFileHandle> {
-    return Promise.resolve(file)
-    
-    // load browser file WITH connected permissions
-    //return this.directoryHandler.getFileHandle(file.name)
-    
-    // load browser file but with no connected permissions
-    // return file.getFile ? await file.getFile() : file as any
-  }*/
+  
+  async listFolders(): Promise<string[]> {
+    return this.files.filter(file => file.kind && (file as any).kind !== 'directory')
+      .map(file => file.name)
+  }
   
   async listFiles(): Promise<DmFileReader[]> {
     return this.files.filter(file => file.kind === 'file')

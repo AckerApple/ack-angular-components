@@ -28,6 +28,12 @@ export class SafariDirectoryManager implements DirectoryManager {
     return this.getRelativeItems().map(file => file.name)
   }
 
+  async listFolders(): Promise<string[]> {
+    return this.getRelativeItems()
+      .filter(file => file.name.split('.').length === 1)
+      .map(file => file.name)
+  }
+
   async listFiles(): Promise<DmFileReader[]> {
     return this.getRelativeItems().map(file => new BrowserDmFileReader(file, this))
   }
