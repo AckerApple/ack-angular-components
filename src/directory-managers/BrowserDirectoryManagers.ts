@@ -80,7 +80,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
   }
   
   async listFolders(): Promise<string[]> {
-    return this.files.filter(file => file.kind && (file as any).kind !== 'directory')
+    return this.files.filter(file => file.kind && (file as any).kind === 'directory')
       .map(file => file.name)
   }
   
