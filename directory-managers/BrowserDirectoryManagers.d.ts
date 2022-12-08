@@ -16,7 +16,8 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     directoryHandler: FileSystemDirectoryHandle);
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;
-    listFiles(): Promise<DmFileReader[]>;
+    listFiles(): Promise<string[]>;
+    getFiles(): Promise<DmFileReader[]>;
     getDirectory(newPath: string, options?: FileSystemGetDirectoryOptions): Promise<BrowserDirectoryManager>;
     file(fileName: string, options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;
     findFileByPath(path: string, directoryHandler?: any): Promise<BrowserDmFileReader | undefined>;

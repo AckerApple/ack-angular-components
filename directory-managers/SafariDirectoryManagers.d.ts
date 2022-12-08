@@ -8,7 +8,8 @@ export declare class SafariDirectoryManager implements DirectoryManager {
     getRelativeItems(): File[];
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;
-    listFiles(): Promise<DmFileReader[]>;
+    listFiles(): Promise<string[]>;
+    getFiles(): Promise<DmFileReader[]>;
     findFileByPath(filePath: string): Promise<BrowserDmFileReader | undefined>;
     file(fileName: string, _options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;
 }

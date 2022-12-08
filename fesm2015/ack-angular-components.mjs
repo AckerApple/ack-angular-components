@@ -155,15 +155,13 @@ class BrowserDirectoryManager {
     listFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.files.filter(file => file.kind === 'file')
+                .map(file => file.name);
+        });
+    }
+    getFiles() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.files.filter(file => file.kind === 'file')
                 .map(file => new BrowserDmFileReader(file, this));
-            /*
-            const filePromises: Promise<FileSystemFileHandle>[] = this.files
-              .filter(file => file.kind === 'file')
-              .map(async file => this.getSystemFile(file))
-            
-            return (await Promise.all(filePromises))
-              .map(file => new BrowserDmFileReader(file))
-            */
         });
     }
     getDirectory(newPath, options) {
@@ -267,6 +265,13 @@ class NeutralinoDirectoryManager {
         return __awaiter(this, void 0, void 0, function* () {
             const reads = yield Neutralino.filesystem.readDirectory(this.path);
             return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
+                .map(read => read.entry);
+        });
+    }
+    getFiles() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const reads = yield Neutralino.filesystem.readDirectory(this.path);
+            return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
                 .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this));
         });
     }
@@ -324,6 +329,11 @@ class SafariDirectoryManager {
         });
     }
     listFiles() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.getRelativeItems().map(file => file.name);
+        });
+    }
+    getFiles() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.getRelativeItems().map(file => new BrowserDmFileReader(file, this));
         });

@@ -2,7 +2,8 @@ export interface DirectoryManager {
     path: string;
     getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>;
     list: () => Promise<string[]>;
-    listFiles: () => Promise<DmFileReader[]>;
+    getFiles: () => Promise<DmFileReader[]>;
+    listFiles: () => Promise<string[]>;
     listFolders: () => Promise<string[]>;
     findFileByPath: (path: string) => Promise<DmFileReader | undefined>;
     file: (fileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>;
