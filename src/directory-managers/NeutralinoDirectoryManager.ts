@@ -47,6 +47,12 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
       .map(read => read.entry)
   }
 
+  async getFolders(): Promise<NeutralinoDirectoryManager[]> {
+    return Promise.all(
+      (await this.listFolders()).map(async name => await this.getDirectory(name))
+    )
+  }
+
   async getFiles(): Promise<DmFileReader[]> {
     const reads: {entry: string, type: 'FILE' | 'DIRECTORY'}[] = await Neutralino.filesystem.readDirectory( this.path )
     return reads.filter(read => !['.','..'].includes(read.entry) && read.type !== 'DIRECTORY')
