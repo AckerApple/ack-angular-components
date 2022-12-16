@@ -106,16 +106,18 @@ export class BrowserDirectoryManager implements DirectoryManager {
     options?: FileSystemGetDirectoryOptions
   ) {
     const newPathArray = newPath.split('/')
+    let fullNewPath = this.path
     
     // traverse through each folder
     const dir: FileSystemDirectoryHandle = await newPathArray.reduce(async (last,current) => {
       const next: FileSystemDirectoryHandle = await last
       const newHandle = next.getDirectoryHandle(current, options)
+      const name = (await newHandle).name
+      fullNewPath = path.join(fullNewPath, name)
       return newHandle
     }, Promise.resolve(this.directoryHandler))
     
     const files: FileSystemFileHandle[] = await directoryReadToArray(dir)
-    const fullNewPath = path.join(this.path, newPath)
     const newDir = new BrowserDirectoryManager(
       fullNewPath,
       files,
