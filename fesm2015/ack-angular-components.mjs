@@ -143,6 +143,7 @@ class BrowserDirectoryManager {
         this.path = path;
         this.files = files;
         this.directoryHandler = directoryHandler;
+        this.name = getNameByPath(path);
     }
     list() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -233,6 +234,10 @@ class BrowserDirectoryManager {
         });
     }
 }
+function getNameByPath(path) {
+    const half = path.split(/\//).pop();
+    return half.split(/\\/).pop();
+}
 
 function convertSlashes(string) {
     return string.replace('\\', '/');
@@ -263,6 +268,7 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
 class NeutralinoDirectoryManager {
     constructor(path) {
         this.path = path;
+        this.name = getNameByPath(path);
     }
     list() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -320,6 +326,7 @@ class SafariDirectoryManager {
     constructor(path = '', files) {
         this.path = path;
         this.files = files;
+        this.name = getNameByPath(path);
     }
     getDirectory(path) {
         return __awaiter(this, void 0, void 0, function* () {

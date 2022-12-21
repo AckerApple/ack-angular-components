@@ -10,6 +10,7 @@ export declare class NeutralinoDmFileReader extends BaseDmFileReader implements 
 }
 export declare class NeutralinoDirectoryManager implements DirectoryManager {
     path: string;
+    name: string;
     constructor(path: string);
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;

@@ -1,4 +1,5 @@
 export interface DirectoryManager {
+    name: string;
     path: string;
     getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>;
     list: () => Promise<string[]>;

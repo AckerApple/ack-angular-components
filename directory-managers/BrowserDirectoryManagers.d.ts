@@ -13,6 +13,7 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     path: string;
     files: FileSystemFileHandle[];
     directoryHandler: FileSystemDirectoryHandle;
+    name: string;
     constructor(path: string, files: FileSystemFileHandle[], // LikeFile[],
     directoryHandler: FileSystemDirectoryHandle);
     list(): Promise<string[]>;
@@ -24,3 +25,4 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     file(fileName: string, options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;
     findFileByPath(path: string, directoryHandler?: any): Promise<BrowserDmFileReader | undefined>;
 }
+export declare function getNameByPath(path: string): string;

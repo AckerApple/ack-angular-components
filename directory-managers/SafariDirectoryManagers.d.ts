@@ -3,6 +3,7 @@ import { BrowserDmFileReader } from "./BrowserDirectoryManagers";
 export declare class SafariDirectoryManager implements DirectoryManager {
     path: string;
     files: File[];
+    name: string;
     constructor(path: string, files: File[]);
     getDirectory(path: string): Promise<SafariDirectoryManager>;
     getRelativeItems(): File[];
