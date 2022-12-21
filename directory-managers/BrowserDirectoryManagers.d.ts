@@ -4,8 +4,9 @@ export declare class BrowserDmFileReader extends BaseDmFileReader implements DmF
     directory: DirectoryManager;
     name: string;
     constructor(file: File | FileSystemFileHandle, directory: DirectoryManager);
+    stats(): Promise<File>;
     write(fileString: string): Promise<void>;
-    private getReadFile;
+    private getRealFile;
     readAsText(): Promise<string>;
 }
 export declare class BrowserDirectoryManager implements DirectoryManager {

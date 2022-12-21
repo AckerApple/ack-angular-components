@@ -9,6 +9,13 @@ export interface DirectoryManager {
     findFileByPath: (path: string) => Promise<DmFileReader | undefined>;
     file: (fileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>;
 }
+export interface FileStats {
+    lastModified: number;
+    lastModifiedDate?: Date;
+    name: string;
+    size: number;
+    type: string;
+}
 export interface DmFileReader {
     directory: DirectoryManager;
     name: string;
@@ -19,6 +26,7 @@ export interface DmFileReader {
     readXmlFirstElementByTagName: (tagName: string) => Promise<Element | undefined>;
     readXmlElementsByTagName: (tagName: string) => Promise<Element[]>;
     readXmlFirstElementContentByTagName: (tagName: string) => Promise<string | null | undefined>;
+    stats: () => Promise<FileStats>;
 }
 export declare class BaseDmFileReader {
     readXmlFirstElementContentByTagName(tagName: string): Promise<string | null | undefined>;

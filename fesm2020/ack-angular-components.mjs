@@ -4,9 +4,7 @@ import * as i1 from '@angular/common';
 import { CommonModule } from '@angular/common';
 
 function stringToXml(string) {
-    const parser = new DOMParser();
-    const result = parser.parseFromString(string.trim(), "text/xml");
-    return result;
+    return new DOMParser().parseFromString(string.trim(), "text/xml");
 }
 
 class BaseDmFileReader {
@@ -59,6 +57,9 @@ class BrowserDmFileReader extends BaseDmFileReader {
         this.directory = directory;
         this.name = file.name;
     }
+    async stats() {
+        return this.getRealFile();
+    }
     async write(fileString) {
         let writableStream;
         const likeFile = this.file;
@@ -87,7 +88,7 @@ class BrowserDmFileReader extends BaseDmFileReader {
         // close the file and write the contents to disk.
         await writableStream.close();
     }
-    async getReadFile() {
+    async getRealFile() {
         const file = this.file;
         return file.getFile ? await file.getFile() : Promise.resolve(file);
     }
@@ -95,7 +96,7 @@ class BrowserDmFileReader extends BaseDmFileReader {
         return new Promise(async (res, rej) => {
             try {
                 var reader = new FileReader();
-                const file = await this.getReadFile();
+                const file = await this.getRealFile();
                 reader.readAsText(file);
                 reader.onload = () => res(reader.result);
             }
@@ -133,14 +134,16 @@ class BrowserDirectoryManager {
     }
     async getDirectory(newPath, options) {
         const newPathArray = newPath.split('/');
+        let fullNewPath = this.path;
         // traverse through each folder
         const dir = await newPathArray.reduce(async (last, current) => {
             const next = await last;
             const newHandle = next.getDirectoryHandle(current, options);
+            const name = (await newHandle).name;
+            fullNewPath = path.join(fullNewPath, name);
             return newHandle;
         }, Promise.resolve(this.directoryHandler));
         const files = await directoryReadToArray(dir);
-        const fullNewPath = path.join(this.path, newPath);
         const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
         return newDir;
     }
@@ -195,6 +198,9 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
         this.filePath = filePath;
         this.directory = directory;
         this.name = filePath.split('/').pop();
+    }
+    async stats() {
+        return fs.getStats(this.filePath);
     }
     readAsText() {
         return fs.readFile(this.filePath); // .toString()

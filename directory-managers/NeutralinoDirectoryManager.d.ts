@@ -4,6 +4,7 @@ export declare class NeutralinoDmFileReader extends BaseDmFileReader implements 
     directory: NeutralinoDirectoryManager;
     name: string;
     constructor(filePath: string, directory: NeutralinoDirectoryManager);
+    stats(): Promise<any>;
     readAsText(): Promise<string>;
     write(fileString: string): Promise<any>;
 }
