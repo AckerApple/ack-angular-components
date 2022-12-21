@@ -1,12 +1,16 @@
 import { DirectoryManager, DmFileReader } from "./DirectoryManagers"
-import { BrowserDmFileReader } from "./BrowserDirectoryManagers"
+import { BrowserDmFileReader, getNameByPath } from "./BrowserDirectoryManagers"
 import { path } from "./path"
 
 export class SafariDirectoryManager implements DirectoryManager {
+  name: string
+
   constructor(
     public path: string = '',
     public files: File[],
-  ) {}
+  ) {
+    this.name = getNameByPath(path)
+  }
 
   async getDirectory(path: string) {
     // safari gives you all items up front

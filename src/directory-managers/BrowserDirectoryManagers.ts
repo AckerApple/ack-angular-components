@@ -73,11 +73,15 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
 }
 
 export class BrowserDirectoryManager implements DirectoryManager {
+  name: string
+
   constructor(
     public path: string,
     public files: FileSystemFileHandle[], // LikeFile[],
     public directoryHandler: FileSystemDirectoryHandle,
-  ) {}
+  ) {
+    this.name = getNameByPath(path)
+  }
 
   async list(): Promise<string[]> {
     return this.files.map(file => file.name)
@@ -182,4 +186,10 @@ export class BrowserDirectoryManager implements DirectoryManager {
     
     return new BrowserDmFileReader(likeFile, this)
   }
+}
+
+
+export function getNameByPath(path: string) {
+  const half = path.split(/\//).pop() as string
+  return half.split(/\\/).pop() as string
 }

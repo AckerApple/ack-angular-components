@@ -1,6 +1,7 @@
 import { stringToXml } from "./stringToXml.function.ts"
 
 export interface DirectoryManager {
+  name: string
   path: string
   getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>
   

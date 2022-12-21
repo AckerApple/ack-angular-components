@@ -1,3 +1,4 @@
+import { getNameByPath } from "./BrowserDirectoryManagers"
 import { convertSlashes } from "./convertSlashes"
 import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers"
 import { path } from "./path"
@@ -40,9 +41,13 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
 }
 
 export class NeutralinoDirectoryManager implements DirectoryManager {
+  name: string
+
   constructor(
     public path: string,
-  ) {}
+  ) {
+    this.name = getNameByPath(path)
+  }
 
   async list(): Promise<string[]> {
     const reads = await Neutralino.filesystem.readDirectory( this.path )
