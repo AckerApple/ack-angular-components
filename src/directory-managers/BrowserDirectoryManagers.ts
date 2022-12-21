@@ -13,6 +13,10 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
     this.name = file.name
   }
 
+  async stats() {
+    return this.getRealFile()
+  }
+
   async write(fileString: string) {
     let writableStream: any
     const likeFile: any = this.file
@@ -49,7 +53,7 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
     await writableStream.close()
   }
 
-  private async getReadFile(): Promise<File> {
+  private async getRealFile(): Promise<File> {
     const file = this.file as any
     return file.getFile ? await file.getFile() : Promise.resolve(file)
   }
@@ -58,7 +62,7 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
     return new Promise(async (res, rej) => {
       try {
         var reader = new FileReader()
-        const file = await this.getReadFile()
+        const file = await this.getRealFile()
         reader.readAsText(file)
         reader.onload = () => res(reader.result as string)
       } catch (err) {

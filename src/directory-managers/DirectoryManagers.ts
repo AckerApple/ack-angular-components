@@ -14,6 +14,14 @@ export interface DirectoryManager {
   file: (fileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>
 }
 
+export interface FileStats {
+  lastModified: number
+  lastModifiedDate?: Date
+  name: string
+  size: number // 788
+  type: string // "application/json"
+}
+
 export interface DmFileReader {
   directory: DirectoryManager
   name: string
@@ -24,6 +32,7 @@ export interface DmFileReader {
   readXmlFirstElementByTagName: (tagName: string) => Promise<Element | undefined>
   readXmlElementsByTagName: (tagName: string) => Promise<Element[]>
   readXmlFirstElementContentByTagName: (tagName: string) => Promise<string | null | undefined>
+  stats: () => Promise<FileStats>
 }
 
 export class BaseDmFileReader {

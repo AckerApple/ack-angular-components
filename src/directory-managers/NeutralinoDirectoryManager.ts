@@ -2,8 +2,18 @@ import { convertSlashes } from "./convertSlashes"
 import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers"
 import { path } from "./path"
 
-declare const Neutralino: any
-const fs = typeof Neutralino === 'object' ? Neutralino.filesystem : {}
+interface INeutralino {
+  filesystem: INeutralinoFs
+}
+interface INeutralinoFs {
+  getStats: (path: string) => any
+  readFile: (path: string) => any
+  writeFile: (path: string, data: string) => any
+  readDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
+}
+
+declare const Neutralino: INeutralino
+const fs = typeof Neutralino === 'object' ? Neutralino.filesystem : {} as INeutralinoFs
 
 export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileReader {
   name: string
@@ -14,6 +24,10 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
   ) {
     super()
     this.name = filePath.split('/').pop() as string
+  }
+
+  async stats() {
+    return fs.getStats(this.filePath)
   }
 
   override readAsText(): Promise<string> {
@@ -31,18 +45,18 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
   ) {}
 
   async list(): Promise<string[]> {
-    const reads: {entry: 'FILE' | 'DIRECTORY', type: string}[] = await Neutralino.filesystem.readDirectory( this.path )
+    const reads = await Neutralino.filesystem.readDirectory( this.path )
     return reads.filter(read => !['.','..'].includes(read.entry)).map(read => read.entry)
   }
 
   async listFolders(): Promise<string[]> {
-    const reads: {entry: string, type: 'FILE' | 'DIRECTORY'}[] = await Neutralino.filesystem.readDirectory( this.path )
+    const reads = await Neutralino.filesystem.readDirectory( this.path )
     return reads.filter(read => !['.','..'].includes(read.entry) && read.type === 'DIRECTORY')
       .map(read => read.entry)
   }
 
   async listFiles(): Promise<string[]> {
-    const reads: {entry: string, type: 'FILE' | 'DIRECTORY'}[] = await Neutralino.filesystem.readDirectory( this.path )
+    const reads = await Neutralino.filesystem.readDirectory( this.path )
     return reads.filter(read => !['.','..'].includes(read.entry) && read.type !== 'DIRECTORY')
       .map(read => read.entry)
   }
@@ -54,7 +68,7 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
   }
 
   async getFiles(): Promise<DmFileReader[]> {
-    const reads: {entry: string, type: 'FILE' | 'DIRECTORY'}[] = await Neutralino.filesystem.readDirectory( this.path )
+    const reads = await Neutralino.filesystem.readDirectory( this.path )
     return reads.filter(read => !['.','..'].includes(read.entry) && read.type !== 'DIRECTORY')
       .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this))
   }
