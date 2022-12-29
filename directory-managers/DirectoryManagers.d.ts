@@ -23,6 +23,7 @@ export interface DmFileReader {
     write: (fileString: string) => Promise<void>;
     readAsText: () => Promise<string>;
     readAsJson: () => Promise<Object>;
+    readAsDataURL: () => Promise<string>;
     readAsXml: () => Promise<Document>;
     readXmlFirstElementByTagName: (tagName: string) => Promise<Element | undefined>;
     readXmlElementsByTagName: (tagName: string) => Promise<Element[]>;

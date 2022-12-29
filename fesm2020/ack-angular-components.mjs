@@ -105,6 +105,19 @@ class BrowserDmFileReader extends BaseDmFileReader {
             }
         });
     }
+    readAsDataURL() {
+        return new Promise(async (res, rej) => {
+            try {
+                var reader = new FileReader();
+                const file = await this.getRealFile();
+                reader.readAsDataURL(file);
+                reader.onload = () => res(reader.result);
+            }
+            catch (err) {
+                rej(err);
+            }
+        });
+    }
 }
 class BrowserDirectoryManager {
     constructor(path, files, // LikeFile[],
@@ -136,14 +149,20 @@ class BrowserDirectoryManager {
     async getDirectory(newPath, options) {
         const newPathArray = newPath.split('/');
         let fullNewPath = this.path;
-        // traverse through each folder
-        const dir = await newPathArray.reduce(async (last, current) => {
-            const next = await last;
-            const newHandle = next.getDirectoryHandle(current, options);
-            const name = (await newHandle).name;
-            fullNewPath = path.join(fullNewPath, name);
-            return newHandle;
-        }, Promise.resolve(this.directoryHandler));
+        let dir;
+        try {
+            // traverse through each folder
+            dir = await newPathArray.reduce(async (last, current) => {
+                const next = await last;
+                const newHandle = next.getDirectoryHandle(current, options);
+                const name = (await newHandle).name;
+                fullNewPath = path.join(fullNewPath, name);
+                return newHandle;
+            }, Promise.resolve(this.directoryHandler));
+        }
+        catch (err) {
+            throw new Error(err.message + `. ${newPath} not found in ${this.path}`);
+        }
         const files = await directoryReadToArray(dir);
         const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
         return newDir;
@@ -209,6 +228,13 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
     }
     readAsText() {
         return fs.readFile(this.filePath); // .toString()
+    }
+    async readAsDataURL() {
+        let data = await fs.readBinaryFile(this.filePath);
+        const view = new Uint8Array(data);
+        var decoder = new TextDecoder('utf8');
+        var b64encoded = btoa(decoder.decode(view));
+        return b64encoded;
     }
     async write(fileString) {
         return fs.writeFile(this.filePath, fileString);

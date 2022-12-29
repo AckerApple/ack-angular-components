@@ -8,6 +8,7 @@ export declare class BrowserDmFileReader extends BaseDmFileReader implements DmF
     write(fileString: string): Promise<void>;
     private getRealFile;
     readAsText(): Promise<string>;
+    readAsDataURL(): Promise<string>;
 }
 export declare class BrowserDirectoryManager implements DirectoryManager {
     path: string;
