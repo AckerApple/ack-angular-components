@@ -70,6 +70,19 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
       }
     })
   }
+
+  readAsDataURL(): Promise<string> {
+    return new Promise(async (res, rej) => {
+      try {
+        var reader = new FileReader()
+        const file = await this.getRealFile()
+        reader.readAsDataURL(file)
+        reader.onload = () => res(reader.result as string)
+      } catch (err) {
+        rej(err)
+      }
+    })
+  }
 }
 
 export class BrowserDirectoryManager implements DirectoryManager {
@@ -115,16 +128,21 @@ export class BrowserDirectoryManager implements DirectoryManager {
   ) {
     const newPathArray = newPath.split('/')
     let fullNewPath = this.path
-    
-    // traverse through each folder
-    const dir: FileSystemDirectoryHandle = await newPathArray.reduce(async (last,current) => {
-      const next: FileSystemDirectoryHandle = await last
-      const newHandle = next.getDirectoryHandle(current, options)
-      const name = (await newHandle).name
-      fullNewPath = path.join(fullNewPath, name)
-      return newHandle
-    }, Promise.resolve(this.directoryHandler))
-    
+    let dir: FileSystemDirectoryHandle
+
+    try {
+      // traverse through each folder
+      dir  = await newPathArray.reduce(async (last,current) => {
+        const next: FileSystemDirectoryHandle = await last
+        const newHandle = next.getDirectoryHandle(current, options)
+        const name = (await newHandle).name
+        fullNewPath = path.join(fullNewPath, name)
+        return newHandle
+      }, Promise.resolve(this.directoryHandler))
+    } catch (err: any) {
+      throw new Error(err.message + `. ${newPath} not found in ${this.path}`)
+    }
+
     const files: FileSystemFileHandle[] = await directoryReadToArray(dir)
     const newDir = new BrowserDirectoryManager(
       fullNewPath,

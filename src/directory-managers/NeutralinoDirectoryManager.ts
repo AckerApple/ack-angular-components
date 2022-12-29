@@ -9,6 +9,7 @@ interface INeutralino {
 interface INeutralinoFs {
   getStats: (path: string) => any
   readFile: (path: string) => any
+  readBinaryFile: (path: string) => any
   writeFile: (path: string, data: string) => any
   readDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
 }
@@ -33,6 +34,14 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
 
   override readAsText(): Promise<string> {
     return fs.readFile(this.filePath) // .toString()
+  }
+  
+  async readAsDataURL(): Promise<string> {
+    let data = await fs.readBinaryFile(this.filePath)
+    const view = new Uint8Array(data);
+    var decoder = new TextDecoder('utf8');
+    var b64encoded = btoa(decoder.decode(view))
+    return b64encoded
   }
 
   async write(fileString: string) {
