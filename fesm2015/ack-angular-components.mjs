@@ -272,7 +272,9 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
     }
     stats() {
         return __awaiter(this, void 0, void 0, function* () {
-            return fs.getStats(this.filePath);
+            const stats = yield fs.getStats(this.filePath);
+            stats.name = stats.name || this.name;
+            return stats;
         });
     }
     readAsText() {

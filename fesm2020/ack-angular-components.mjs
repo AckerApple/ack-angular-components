@@ -224,7 +224,9 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
         this.name = filePath.split('/').pop();
     }
     async stats() {
-        return fs.getStats(this.filePath);
+        const stats = await fs.getStats(this.filePath);
+        stats.name = stats.name || this.name;
+        return stats;
     }
     readAsText() {
         return fs.readFile(this.filePath); // .toString()
