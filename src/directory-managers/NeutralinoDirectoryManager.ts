@@ -29,7 +29,9 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
   }
 
   async stats() {
-    return fs.getStats(this.filePath)
+    const stats = await fs.getStats(this.filePath)
+    stats.name = stats.name || this.name
+    return stats
   }
 
   override readAsText(): Promise<string> {
