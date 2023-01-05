@@ -1,6 +1,6 @@
 {
   "name": "ack-angular-components",
-  "version": "4.1.19",
+  "version": "4.1.20",
   "description": "Extra special directives, components, providers and pipes to aide in tackling everyday interface development needs in Angular2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -23,9 +23,9 @@
     "save:git": "git add . && git commit -m \"update\" && git push",
     "patch:version": "npm --no-git-tag-version version patch",
     "deploy": "npm-run-all save deploy:gh-pages deploy:npm",
-    "deploy:npm": "npm-run-all paste:main save:main publish:main",
+    "deploy:npm": "npm-run-all save:main publish:main",
     "paste:main": "cp -R ./dist/. ../main",
-    "save:main": "cd ../main && git add . && git commit -m \"update\" && git push",
+    "save:main": "npm run paste:main && cd ../main && git add . && git commit -m \"update\" && git push",
     "publish:main": "cd ../main && npm publish",
     "deploy:gh-pages": "cp -R ./example/www/. ../gh-pages && cd ../gh-pages && git add . && git commit -m \"update\" && git push"
   },

@@ -4,6 +4,7 @@ export interface DirectoryManager {
   name: string
   path: string
   getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>
+  findDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager | undefined>
   
   list: () => Promise<string[]>
   listFiles: () => Promise<string[]>

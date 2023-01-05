@@ -1,4 +1,4 @@
-import { getNameByPath } from "./BrowserDirectoryManagers"
+import { findDirectoryWithin, getNameByPath } from "./BrowserDirectoryManagers"
 import { convertSlashes } from "./convertSlashes"
 import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers"
 import { path } from "./path"
@@ -58,6 +58,13 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
     public path: string,
   ) {
     this.name = getNameByPath(path)
+  }
+
+  findDirectory (
+    path: string,
+    options?: FileSystemGetDirectoryOptions,
+  ): Promise<DirectoryManager | undefined> {
+    return findDirectoryWithin(path, this, options)
   }
 
   async list(): Promise<string[]> {

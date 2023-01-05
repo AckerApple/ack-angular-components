@@ -1,5 +1,5 @@
 import { DirectoryManager, DmFileReader } from "./DirectoryManagers"
-import { BrowserDmFileReader, getNameByPath } from "./BrowserDirectoryManagers"
+import { BrowserDmFileReader, findDirectoryWithin, getNameByPath } from "./BrowserDirectoryManagers"
 import { path } from "./path"
 
 export class SafariDirectoryManager implements DirectoryManager {
@@ -10,6 +10,13 @@ export class SafariDirectoryManager implements DirectoryManager {
     public files: File[],
   ) {
     this.name = getNameByPath(path)
+  }
+
+  findDirectory (
+    path: string,
+    options?: FileSystemGetDirectoryOptions,
+  ): Promise<DirectoryManager | undefined> {
+    return findDirectoryWithin(path, this, options)
   }
 
   async getDirectory(path: string) {

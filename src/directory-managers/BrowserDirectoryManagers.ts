@@ -96,6 +96,13 @@ export class BrowserDirectoryManager implements DirectoryManager {
     this.name = getNameByPath(path)
   }
 
+  findDirectory (
+    path: string,
+    options?: FileSystemGetDirectoryOptions,
+  ): Promise<DirectoryManager | undefined> {
+    return findDirectoryWithin(path, this, options)
+  }
+  
   async list(): Promise<string[]> {
     return this.files.map(file => file.name)
   }
@@ -125,7 +132,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
   async getDirectory(
     newPath: string,
     options?: FileSystemGetDirectoryOptions
-  ) {
+  ): Promise<BrowserDirectoryManager> {
     const newPathArray = newPath.split('/')
     let fullNewPath = this.path
     let dir: FileSystemDirectoryHandle
@@ -140,7 +147,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
         return newHandle
       }, Promise.resolve(this.directoryHandler))
     } catch (err: any) {
-      throw new Error(err.message + `. ${newPath} not found in ${this.path}`)
+      throw new Error(err.message + `. ${newPath} not found in ${this.name} (${this.path})`)
     }
 
     const files: FileSystemFileHandle[] = await directoryReadToArray(dir)
@@ -167,11 +174,12 @@ export class BrowserDirectoryManager implements DirectoryManager {
     path: string,
     directoryHandler: any = this.directoryHandler,
   ): Promise<BrowserDmFileReader | undefined> {
-    const pathSplit = path.split('/')
-    const fileName = pathSplit[ pathSplit.length-1 ]
     if ( !this.files.length ) {
       return
     }
+
+    const pathSplit = path.split('/')
+    const fileName = pathSplit[ pathSplit.length-1 ]
 
     // chrome we dig through the first selected directory and search the subs
     if ( pathSplit.length > 1 ) {
@@ -210,4 +218,23 @@ export class BrowserDirectoryManager implements DirectoryManager {
 export function getNameByPath(path: string) {
   const half = path.split(/\//).pop() as string
   return half.split(/\\/).pop() as string
+}
+
+export async function findDirectoryWithin(
+  path: string,
+  inDir: DirectoryManager,
+  options?: FileSystemGetDirectoryOptions,
+): Promise<DirectoryManager | undefined> {
+  const pathSplit = path.split('/')
+
+  if ( pathSplit.length > 1 ) {
+    const lastParent = pathSplit.shift() as string // remove index 0 of lastParent/firstParent/file.xyz
+    const parent = await inDir.getDirectory(lastParent)
+    if ( !parent ) {
+      return // undefined
+    }
+    return await findDirectoryWithin(lastParent, parent, options)
+  }
+
+  return inDir // return last result
 }
