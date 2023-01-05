@@ -158,6 +158,9 @@ class BrowserDirectoryManager {
         this.directoryHandler = directoryHandler;
         this.name = getNameByPath(path);
     }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
+    }
     list() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.files.map(file => file.name);
@@ -203,7 +206,7 @@ class BrowserDirectoryManager {
                 }), Promise.resolve(this.directoryHandler));
             }
             catch (err) {
-                throw new Error(err.message + `. ${newPath} not found in ${this.path}`);
+                throw new Error(err.message + `. ${newPath} not found in ${this.name} (${this.path})`);
             }
             const files = yield directoryReadToArray(dir);
             const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
@@ -222,11 +225,11 @@ class BrowserDirectoryManager {
     }
     findFileByPath(path, directoryHandler = this.directoryHandler) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pathSplit = path.split('/');
-            const fileName = pathSplit[pathSplit.length - 1];
             if (!this.files.length) {
                 return;
             }
+            const pathSplit = path.split('/');
+            const fileName = pathSplit[pathSplit.length - 1];
             // chrome we dig through the first selected directory and search the subs
             if (pathSplit.length > 1) {
                 const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
@@ -256,6 +259,20 @@ class BrowserDirectoryManager {
 function getNameByPath(path) {
     const half = path.split(/\//).pop();
     return half.split(/\\/).pop();
+}
+function findDirectoryWithin(path, inDir, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pathSplit = path.split('/');
+        if (pathSplit.length > 1) {
+            const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
+            const parent = yield inDir.getDirectory(lastParent);
+            if (!parent) {
+                return; // undefined
+            }
+            return yield findDirectoryWithin(lastParent, parent, options);
+        }
+        return inDir; // return last result
+    });
 }
 
 function convertSlashes(string) {
@@ -299,6 +316,9 @@ class NeutralinoDirectoryManager {
     constructor(path) {
         this.path = path;
         this.name = getNameByPath(path);
+    }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
     }
     list() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -357,6 +377,9 @@ class SafariDirectoryManager {
         this.path = path;
         this.files = files;
         this.name = getNameByPath(path);
+    }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
     }
     getDirectory(path) {
         return __awaiter(this, void 0, void 0, function* () {

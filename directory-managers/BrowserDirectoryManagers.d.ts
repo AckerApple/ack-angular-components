@@ -17,6 +17,7 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     name: string;
     constructor(path: string, files: FileSystemFileHandle[], // LikeFile[],
     directoryHandler: FileSystemDirectoryHandle);
+    findDirectory(path: string, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;
     listFiles(): Promise<string[]>;
@@ -27,3 +28,4 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     findFileByPath(path: string, directoryHandler?: any): Promise<BrowserDmFileReader | undefined>;
 }
 export declare function getNameByPath(path: string): string;
+export declare function findDirectoryWithin(path: string, inDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;

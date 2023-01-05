@@ -13,6 +13,7 @@ export declare class NeutralinoDirectoryManager implements DirectoryManager {
     path: string;
     name: string;
     constructor(path: string);
+    findDirectory(path: string, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;
     list(): Promise<string[]>;
     listFolders(): Promise<string[]>;
     listFiles(): Promise<string[]>;

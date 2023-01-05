@@ -127,6 +127,9 @@ class BrowserDirectoryManager {
         this.directoryHandler = directoryHandler;
         this.name = getNameByPath(path);
     }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
+    }
     async list() {
         return this.files.map(file => file.name);
     }
@@ -161,7 +164,7 @@ class BrowserDirectoryManager {
             }, Promise.resolve(this.directoryHandler));
         }
         catch (err) {
-            throw new Error(err.message + `. ${newPath} not found in ${this.path}`);
+            throw new Error(err.message + `. ${newPath} not found in ${this.name} (${this.path})`);
         }
         const files = await directoryReadToArray(dir);
         const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
@@ -176,11 +179,11 @@ class BrowserDirectoryManager {
         return new BrowserDmFileReader(fileHandle, this);
     }
     async findFileByPath(path, directoryHandler = this.directoryHandler) {
-        const pathSplit = path.split('/');
-        const fileName = pathSplit[pathSplit.length - 1];
         if (!this.files.length) {
             return;
         }
+        const pathSplit = path.split('/');
+        const fileName = pathSplit[pathSplit.length - 1];
         // chrome we dig through the first selected directory and search the subs
         if (pathSplit.length > 1) {
             const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
@@ -209,6 +212,18 @@ class BrowserDirectoryManager {
 function getNameByPath(path) {
     const half = path.split(/\//).pop();
     return half.split(/\\/).pop();
+}
+async function findDirectoryWithin(path, inDir, options) {
+    const pathSplit = path.split('/');
+    if (pathSplit.length > 1) {
+        const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
+        const parent = await inDir.getDirectory(lastParent);
+        if (!parent) {
+            return; // undefined
+        }
+        return await findDirectoryWithin(lastParent, parent, options);
+    }
+    return inDir; // return last result
 }
 
 function convertSlashes(string) {
@@ -246,6 +261,9 @@ class NeutralinoDirectoryManager {
     constructor(path) {
         this.path = path;
         this.name = getNameByPath(path);
+    }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
     }
     async list() {
         const reads = await Neutralino.filesystem.readDirectory(this.path);
@@ -290,6 +308,9 @@ class SafariDirectoryManager {
         this.path = path;
         this.files = files;
         this.name = getNameByPath(path);
+    }
+    findDirectory(path, options) {
+        return findDirectoryWithin(path, this, options);
     }
     async getDirectory(path) {
         // safari gives you all items up front

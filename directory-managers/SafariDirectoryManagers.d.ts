@@ -5,6 +5,7 @@ export declare class SafariDirectoryManager implements DirectoryManager {
     files: File[];
     name: string;
     constructor(path: string, files: File[]);
+    findDirectory(path: string, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;
     getDirectory(path: string): Promise<SafariDirectoryManager>;
     getRelativeItems(): File[];
     list(): Promise<string[]>;
