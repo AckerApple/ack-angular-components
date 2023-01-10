@@ -1,6 +1,6 @@
 {
   "name": "ack-angular-components",
-  "version": "4.1.20",
+  "version": "4.1.21",
   "description": "Extra special directives, components, providers and pipes to aide in tackling everyday interface development needs in Angular2",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -19,7 +19,7 @@
     "build:example": "ng build example --stats-json",
     "build": "npm-run-all build:dist compile:dist:package build:example",
     "compile:dist:package": "node scripts/update-dist-package.js",
-    "save": "npm-run-all build patch:version save:git",
+    "save": "npm-run-all build patch:version save:git save:main",
     "save:git": "git add . && git commit -m \"update\" && git push",
     "patch:version": "npm --no-git-tag-version version patch",
     "deploy": "npm-run-all save deploy:gh-pages deploy:npm",

@@ -68,3 +68,37 @@ export class BaseDmFileReader {
     throw new Error('no override provided for BaseDmFileReader.readAsText')
   }
 }
+
+export function getNameByPath(path: string) {
+  const half = path.split(/\//).pop() as string
+  return half.split(/\\/).pop() as string
+}
+
+export async function findDirectoryWithin(
+  path: string,
+  inDir: DirectoryManager,
+  options?: FileSystemGetDirectoryOptions,
+): Promise<DirectoryManager | undefined> {
+  const pathSplit = path.split('/').filter(x => x)
+  
+  if ( pathSplit.length >= 1 ) {
+    const firstParent = pathSplit.shift() as string // remove index 0 of firstParent/firstParent/file.xyz
+    
+    try {
+      const parent = await inDir.getDirectory(firstParent)
+      if ( !parent ) {
+        return // undefined
+      }
+      return await findDirectoryWithin(pathSplit.join('/'), parent, options)
+    } catch (err) {
+      const folderList = await inDir.listFolders()
+      if ( folderList.includes(firstParent) ) {
+        throw err // rethrow because its not about a missing folder
+      }
+
+      return // our folderList does not contain what we are looking for
+    }
+  }
+
+  return inDir // return last result
+}

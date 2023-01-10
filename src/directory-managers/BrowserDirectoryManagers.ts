@@ -1,4 +1,4 @@
-import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers"
+import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath } from "./DirectoryManagers"
 import { directoryReadToArray } from "./directoryReadToArray.function"
 import { path } from "./path"
 
@@ -212,29 +212,4 @@ export class BrowserDirectoryManager implements DirectoryManager {
     
     return new BrowserDmFileReader(likeFile, this)
   }
-}
-
-
-export function getNameByPath(path: string) {
-  const half = path.split(/\//).pop() as string
-  return half.split(/\\/).pop() as string
-}
-
-export async function findDirectoryWithin(
-  path: string,
-  inDir: DirectoryManager,
-  options?: FileSystemGetDirectoryOptions,
-): Promise<DirectoryManager | undefined> {
-  const pathSplit = path.split('/')
-
-  if ( pathSplit.length > 1 ) {
-    const lastParent = pathSplit.shift() as string // remove index 0 of lastParent/firstParent/file.xyz
-    const parent = await inDir.getDirectory(lastParent)
-    if ( !parent ) {
-      return // undefined
-    }
-    return await findDirectoryWithin(lastParent, parent, options)
-  }
-
-  return inDir // return last result
 }

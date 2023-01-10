@@ -1,6 +1,5 @@
-import { findDirectoryWithin, getNameByPath } from "./BrowserDirectoryManagers"
 import { convertSlashes } from "./convertSlashes"
-import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers"
+import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath } from "./DirectoryManagers"
 import { path } from "./path"
 
 interface INeutralino {
