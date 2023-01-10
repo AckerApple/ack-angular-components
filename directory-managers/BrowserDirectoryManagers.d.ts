@@ -27,5 +27,3 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     file(fileName: string, options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;
     findFileByPath(path: string, directoryHandler?: any): Promise<BrowserDmFileReader | undefined>;
 }
-export declare function getNameByPath(path: string): string;
-export declare function findDirectoryWithin(path: string, inDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;

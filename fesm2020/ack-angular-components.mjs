@@ -32,6 +32,31 @@ class BaseDmFileReader {
         throw new Error('no override provided for BaseDmFileReader.readAsText');
     }
 }
+function getNameByPath(path) {
+    const half = path.split(/\//).pop();
+    return half.split(/\\/).pop();
+}
+async function findDirectoryWithin(path, inDir, options) {
+    const pathSplit = path.split('/').filter(x => x);
+    if (pathSplit.length >= 1) {
+        const firstParent = pathSplit.shift(); // remove index 0 of firstParent/firstParent/file.xyz
+        try {
+            const parent = await inDir.getDirectory(firstParent);
+            if (!parent) {
+                return; // undefined
+            }
+            return await findDirectoryWithin(pathSplit.join('/'), parent, options);
+        }
+        catch (err) {
+            const folderList = await inDir.listFolders();
+            if (folderList.includes(firstParent)) {
+                throw err; // rethrow because its not about a missing folder
+            }
+            return; // our folderList does not contain what we are looking for
+        }
+    }
+    return inDir; // return last result
+}
 
 async function directoryReadToArray(
 // directory: FileSystemFileHandle[] //LikeFile[]
@@ -208,22 +233,6 @@ class BrowserDirectoryManager {
         // const file = await this.getSystemFile(likeFile)
         return new BrowserDmFileReader(likeFile, this);
     }
-}
-function getNameByPath(path) {
-    const half = path.split(/\//).pop();
-    return half.split(/\\/).pop();
-}
-async function findDirectoryWithin(path, inDir, options) {
-    const pathSplit = path.split('/');
-    if (pathSplit.length > 1) {
-        const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
-        const parent = await inDir.getDirectory(lastParent);
-        if (!parent) {
-            return; // undefined
-        }
-        return await findDirectoryWithin(lastParent, parent, options);
-    }
-    return inDir; // return last result
 }
 
 function convertSlashes(string) {

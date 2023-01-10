@@ -39,3 +39,5 @@ export declare class BaseDmFileReader {
     readAsJson(): Promise<string>;
     readAsText(): Promise<string>;
 }
+export declare function getNameByPath(path: string): string;
+export declare function findDirectoryWithin(path: string, inDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;
