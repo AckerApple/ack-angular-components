@@ -3,7 +3,10 @@ import { stringToXml } from "./stringToXml.function.ts"
 export interface DirectoryManager {
   name: string
   path: string
+
+  // should throw error if directory does not exist
   getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>
+  // should return undefined if directory does not exist
   findDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager | undefined>
   
   list: () => Promise<string[]>

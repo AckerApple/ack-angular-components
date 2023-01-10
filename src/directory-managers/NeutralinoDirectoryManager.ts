@@ -96,7 +96,12 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
   }
 
   async getDirectory(newPath: string) {
-    return new NeutralinoDirectoryManager( path.join(this.path, newPath) )
+    const pathTo = path.join(this.path, newPath)
+    
+    // ensure path exists
+    await Neutralino.filesystem.readDirectory(pathTo)
+    
+    return new NeutralinoDirectoryManager( pathTo )
   }
 
   async findFileByPath (
