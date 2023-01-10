@@ -363,7 +363,10 @@ class NeutralinoDirectoryManager {
     }
     getDirectory(newPath) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new NeutralinoDirectoryManager(path.join(this.path, newPath));
+            const pathTo = path.join(this.path, newPath);
+            // ensure path exists
+            yield Neutralino.filesystem.readDirectory(pathTo);
+            return new NeutralinoDirectoryManager(pathTo);
         });
     }
     findFileByPath(filePath) {

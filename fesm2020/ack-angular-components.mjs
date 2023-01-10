@@ -297,7 +297,10 @@ class NeutralinoDirectoryManager {
             .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this));
     }
     async getDirectory(newPath) {
-        return new NeutralinoDirectoryManager(path.join(this.path, newPath));
+        const pathTo = path.join(this.path, newPath);
+        // ensure path exists
+        await Neutralino.filesystem.readDirectory(pathTo);
+        return new NeutralinoDirectoryManager(pathTo);
     }
     async findFileByPath(filePath) {
         const fullFilePath = this.getFullPath(filePath);
