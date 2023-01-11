@@ -1,4 +1,4 @@
-import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath } from "./DirectoryManagers"
+import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { directoryReadToArray } from "./directoryReadToArray.function"
 import { path } from "./path"
 
@@ -129,6 +129,10 @@ export class BrowserDirectoryManager implements DirectoryManager {
       .map(file => new BrowserDmFileReader(file, this))
   }
 
+  createDirectory(newPath: string) {
+    return this.getDirectory(newPath, { create: true })
+  }
+
   async getDirectory(
     newPath: string,
     options?: FileSystemGetDirectoryOptions
@@ -157,6 +161,20 @@ export class BrowserDirectoryManager implements DirectoryManager {
       dir
     )
     return newDir
+  }
+
+  removeEntry(
+    name: string,
+    options?: { recursive: boolean }
+  ): Promise<void> {
+    return this.directoryHandler.removeEntry(name, options)
+  }
+
+  async renameFile(
+    oldFileName: string,
+    newFileName: string
+  ) {
+    return renameFileInDir(oldFileName, newFileName, this)
   }
 
   async file(fileName: string, options?: FileSystemGetFileOptions) {

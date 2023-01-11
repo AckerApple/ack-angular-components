@@ -1,4 +1,4 @@
-import { DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath } from "./DirectoryManagers"
+import { DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { BrowserDmFileReader } from "./BrowserDirectoryManagers"
 import { path } from "./path"
 
@@ -12,11 +12,31 @@ export class SafariDirectoryManager implements DirectoryManager {
     this.name = getNameByPath(path)
   }
 
+  async renameFile(
+    oldFileName: string,
+    newFileName: string
+  ) {
+    return renameFileInDir(oldFileName, newFileName, this)
+  }
+
+  /** ⚠️ does not actually work */
+  removeEntry(
+    _name: string,
+    _options?: { recursive: boolean }
+  ): Promise<void> {
+    throw 'removeEntry does not work in Safari'
+  }
+
   findDirectory (
     path: string,
     options?: FileSystemGetDirectoryOptions,
   ): Promise<DirectoryManager | undefined> {
     return findDirectoryWithin(path, this, options)
+  }
+
+  /** ⚠️ does not actually work */
+  createDirectory(newPath: string) {
+    return this.getDirectory(newPath)
   }
 
   async getDirectory(path: string) {

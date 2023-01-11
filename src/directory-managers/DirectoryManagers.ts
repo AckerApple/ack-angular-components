@@ -4,6 +4,7 @@ export interface DirectoryManager {
   name: string
   path: string
 
+  createDirectory: (path: string) => Promise<DirectoryManager>
   // should throw error if directory does not exist
   getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>
   // should return undefined if directory does not exist
@@ -17,6 +18,9 @@ export interface DirectoryManager {
   getFiles: () => Promise<DmFileReader[]>
   findFileByPath: (path: string) => Promise<DmFileReader | undefined>
   file: (fileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>
+  renameFile: (oldFileName: string, newfileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>
+
+  removeEntry: (name: string, options?: { recursive: boolean }) => Promise<void>
 }
 
 export interface FileStats {
@@ -104,4 +108,17 @@ export async function findDirectoryWithin(
   }
 
   return inDir // return last result
+}
+
+export async function renameFileInDir(
+  oldFileName: string,
+  newFileName: string,
+  dir: DirectoryManager
+): Promise<DmFileReader> {
+  const oldFile = await dir.file(oldFileName)
+  const data = await oldFile.readAsText()
+  const newFile = await dir.file(newFileName, { create: true })
+  await newFile.write(data)
+  await dir.removeEntry(oldFileName)
+  return newFile
 }

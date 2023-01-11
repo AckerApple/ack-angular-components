@@ -1,5 +1,5 @@
 import { convertSlashes } from "./convertSlashes"
-import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath } from "./DirectoryManagers"
+import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { path } from "./path"
 
 interface INeutralino {
@@ -10,6 +10,10 @@ interface INeutralinoFs {
   readFile: (path: string) => any
   readBinaryFile: (path: string) => any
   writeFile: (path: string, data: string) => any
+  removeFile: (path: string) => any
+  removeDirectory: (path: string) => any
+  
+  createDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
   readDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
 }
 
@@ -95,6 +99,12 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
       .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this))
   }
 
+  async createDirectory(newPath: string): Promise<DirectoryManager> {
+    const pathTo = path.join(this.path, newPath)
+    await Neutralino.filesystem.createDirectory(pathTo)
+    return this.getDirectory(newPath)
+  }
+
   async getDirectory(newPath: string) {
     const pathTo = path.join(this.path, newPath)
     
@@ -118,5 +128,27 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
   getFullPath(itemPath: string) {
     let fullFilePath = path.join(this.path, itemPath)
     return convertSlashes(fullFilePath)
+  }
+
+  async renameFile(
+    oldFileName: string,
+    newFileName: string
+  ) {
+    return renameFileInDir(oldFileName, newFileName, this)
+  }
+
+  async removeEntry(
+    name: string,
+    // options?: { recursive: boolean }
+  ): Promise<void> {
+    const pathTo = path.join(this.path, name)
+    
+    const file = await this.findFileByPath(pathTo)
+    if ( file ) {
+      return Neutralino.filesystem.removeFile(pathTo)
+    }
+    
+    await Neutralino.filesystem.removeDirectory(pathTo)
+    return
   }
 }
