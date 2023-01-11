@@ -19,8 +19,11 @@ export declare class NeutralinoDirectoryManager implements DirectoryManager {
     listFiles(): Promise<string[]>;
     getFolders(): Promise<NeutralinoDirectoryManager[]>;
     getFiles(): Promise<DmFileReader[]>;
+    createDirectory(newPath: string): Promise<DirectoryManager>;
     getDirectory(newPath: string): Promise<NeutralinoDirectoryManager>;
     findFileByPath(filePath: string): Promise<NeutralinoDmFileReader>;
     file(fileName: string, _options?: FileSystemGetFileOptions): Promise<NeutralinoDmFileReader>;
     getFullPath(itemPath: string): string;
+    renameFile(oldFileName: string, newFileName: string): Promise<DmFileReader>;
+    removeEntry(name: string): Promise<void>;
 }

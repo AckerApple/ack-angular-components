@@ -23,7 +23,12 @@ export declare class BrowserDirectoryManager implements DirectoryManager {
     listFiles(): Promise<string[]>;
     getFolders(): Promise<BrowserDirectoryManager[]>;
     getFiles(): Promise<DmFileReader[]>;
+    createDirectory(newPath: string): Promise<BrowserDirectoryManager>;
     getDirectory(newPath: string, options?: FileSystemGetDirectoryOptions): Promise<BrowserDirectoryManager>;
+    removeEntry(name: string, options?: {
+        recursive: boolean;
+    }): Promise<void>;
+    renameFile(oldFileName: string, newFileName: string): Promise<DmFileReader>;
     file(fileName: string, options?: FileSystemGetFileOptions): Promise<BrowserDmFileReader>;
     findFileByPath(path: string, directoryHandler?: any): Promise<BrowserDmFileReader | undefined>;
 }

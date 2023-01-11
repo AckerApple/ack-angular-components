@@ -57,6 +57,14 @@ async function findDirectoryWithin(path, inDir, options) {
     }
     return inDir; // return last result
 }
+async function renameFileInDir(oldFileName, newFileName, dir) {
+    const oldFile = await dir.file(oldFileName);
+    const data = await oldFile.readAsText();
+    const newFile = await dir.file(newFileName, { create: true });
+    await newFile.write(data);
+    await dir.removeEntry(oldFileName);
+    return newFile;
+}
 
 async function directoryReadToArray(
 // directory: FileSystemFileHandle[] //LikeFile[]
@@ -174,6 +182,9 @@ class BrowserDirectoryManager {
         return this.files.filter(file => file.kind === 'file')
             .map(file => new BrowserDmFileReader(file, this));
     }
+    createDirectory(newPath) {
+        return this.getDirectory(newPath, { create: true });
+    }
     async getDirectory(newPath, options) {
         const newPathArray = newPath.split('/');
         let fullNewPath = this.path;
@@ -194,6 +205,12 @@ class BrowserDirectoryManager {
         const files = await directoryReadToArray(dir);
         const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
         return newDir;
+    }
+    removeEntry(name, options) {
+        return this.directoryHandler.removeEntry(name, options);
+    }
+    async renameFile(oldFileName, newFileName) {
+        return renameFileInDir(oldFileName, newFileName, this);
     }
     async file(fileName, options) {
         const findFile = await this.findFileByPath(fileName);
@@ -296,6 +313,11 @@ class NeutralinoDirectoryManager {
         return reads.filter(read => !['.', '..'].includes(read.entry) && read.type !== 'DIRECTORY')
             .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this));
     }
+    async createDirectory(newPath) {
+        const pathTo = path.join(this.path, newPath);
+        await Neutralino.filesystem.createDirectory(pathTo);
+        return this.getDirectory(newPath);
+    }
     async getDirectory(newPath) {
         const pathTo = path.join(this.path, newPath);
         // ensure path exists
@@ -313,6 +335,18 @@ class NeutralinoDirectoryManager {
         let fullFilePath = path.join(this.path, itemPath);
         return convertSlashes(fullFilePath);
     }
+    async renameFile(oldFileName, newFileName) {
+        return renameFileInDir(oldFileName, newFileName, this);
+    }
+    async removeEntry(name) {
+        const pathTo = path.join(this.path, name);
+        const file = await this.findFileByPath(pathTo);
+        if (file) {
+            return Neutralino.filesystem.removeFile(pathTo);
+        }
+        await Neutralino.filesystem.removeDirectory(pathTo);
+        return;
+    }
 }
 
 class SafariDirectoryManager {
@@ -321,8 +355,19 @@ class SafariDirectoryManager {
         this.files = files;
         this.name = getNameByPath(path);
     }
+    async renameFile(oldFileName, newFileName) {
+        return renameFileInDir(oldFileName, newFileName, this);
+    }
+    /** ⚠️ does not actually work */
+    removeEntry(_name, _options) {
+        throw 'removeEntry does not work in Safari';
+    }
     findDirectory(path, options) {
         return findDirectoryWithin(path, this, options);
+    }
+    /** ⚠️ does not actually work */
+    createDirectory(newPath) {
+        return this.getDirectory(newPath);
     }
     async getDirectory(path) {
         // safari gives you all items up front

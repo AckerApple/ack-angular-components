@@ -71,6 +71,16 @@ function findDirectoryWithin(path, inDir, options) {
         return inDir; // return last result
     });
 }
+function renameFileInDir(oldFileName, newFileName, dir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const oldFile = yield dir.file(oldFileName);
+        const data = yield oldFile.readAsText();
+        const newFile = yield dir.file(newFileName, { create: true });
+        yield newFile.write(data);
+        yield dir.removeEntry(oldFileName);
+        return newFile;
+    });
+}
 
 function directoryReadToArray(
 // directory: FileSystemFileHandle[] //LikeFile[]
@@ -217,6 +227,9 @@ class BrowserDirectoryManager {
                 .map(file => new BrowserDmFileReader(file, this));
         });
     }
+    createDirectory(newPath) {
+        return this.getDirectory(newPath, { create: true });
+    }
     getDirectory(newPath, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const newPathArray = newPath.split('/');
@@ -238,6 +251,14 @@ class BrowserDirectoryManager {
             const files = yield directoryReadToArray(dir);
             const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
             return newDir;
+        });
+    }
+    removeEntry(name, options) {
+        return this.directoryHandler.removeEntry(name, options);
+    }
+    renameFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return renameFileInDir(oldFileName, newFileName, this);
         });
     }
     file(fileName, options) {
@@ -361,6 +382,13 @@ class NeutralinoDirectoryManager {
                 .map(read => new NeutralinoDmFileReader(this.getFullPath(read.entry), this));
         });
     }
+    createDirectory(newPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const pathTo = path.join(this.path, newPath);
+            yield Neutralino.filesystem.createDirectory(pathTo);
+            return this.getDirectory(newPath);
+        });
+    }
     getDirectory(newPath) {
         return __awaiter(this, void 0, void 0, function* () {
             const pathTo = path.join(this.path, newPath);
@@ -382,6 +410,22 @@ class NeutralinoDirectoryManager {
         let fullFilePath = path.join(this.path, itemPath);
         return convertSlashes(fullFilePath);
     }
+    renameFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return renameFileInDir(oldFileName, newFileName, this);
+        });
+    }
+    removeEntry(name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const pathTo = path.join(this.path, name);
+            const file = yield this.findFileByPath(pathTo);
+            if (file) {
+                return Neutralino.filesystem.removeFile(pathTo);
+            }
+            yield Neutralino.filesystem.removeDirectory(pathTo);
+            return;
+        });
+    }
 }
 
 class SafariDirectoryManager {
@@ -390,8 +434,21 @@ class SafariDirectoryManager {
         this.files = files;
         this.name = getNameByPath(path);
     }
+    renameFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return renameFileInDir(oldFileName, newFileName, this);
+        });
+    }
+    /** ⚠️ does not actually work */
+    removeEntry(_name, _options) {
+        throw 'removeEntry does not work in Safari';
+    }
     findDirectory(path, options) {
         return findDirectoryWithin(path, this, options);
+    }
+    /** ⚠️ does not actually work */
+    createDirectory(newPath) {
+        return this.getDirectory(newPath);
     }
     getDirectory(path) {
         return __awaiter(this, void 0, void 0, function* () {
