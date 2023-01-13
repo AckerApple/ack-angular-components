@@ -164,28 +164,35 @@ class BrowserDirectoryManager {
         return findDirectoryWithin(path, this, options);
     }
     async list() {
-        return this.files.map(file => file.name);
+        const files = await directoryReadToArray(this.directoryHandler);
+        return files.map(file => file.name);
     }
     async listFolders() {
-        return this.files.filter(file => file.kind && file.kind === 'directory')
+        const items = await directoryReadToArray(this.directoryHandler);
+        return items.filter((file) => file.kind && file.kind === 'directory')
             .map(file => file.name);
     }
     async listFiles() {
-        return this.files.filter(file => file.kind === 'file')
-            .map(file => file.name);
+        const items = await this.list();
+        return items.filter((file) => file.kind === 'file')
+            .map((file) => file.name);
     }
     async getFolders() {
-        return Promise.all(this.files.filter(file => file.kind && file.kind === 'directory')
-            .map(async (file) => await this.getDirectory(file.name)));
+        const names = await this.listFolders();
+        return Promise.all(names.map(async (name) => await this.getDirectory(name)));
     }
     async getFiles() {
-        return this.files.filter(file => file.kind === 'file')
+        const files = await directoryReadToArray(this.directoryHandler);
+        return files.filter(file => file.kind === 'file')
             .map(file => new BrowserDmFileReader(file, this));
     }
     createDirectory(newPath) {
         return this.getDirectory(newPath, { create: true });
     }
     async getDirectory(newPath, options) {
+        if (!newPath) {
+            return this;
+        }
         const newPathArray = newPath.split('/');
         let fullNewPath = this.path;
         let dir;
@@ -206,42 +213,35 @@ class BrowserDirectoryManager {
         const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
         return newDir;
     }
-    removeEntry(name, options) {
-        return this.directoryHandler.removeEntry(name, options);
+    async removeEntry(name, options) {
+        const split = name.split('/');
+        const lastName = split.pop(); // remove last item
+        const dir = split.length >= 1 ? await this.getDirectory(split.join('/')) : this;
+        return dir.directoryHandler.removeEntry(lastName, options);
     }
     async renameFile(oldFileName, newFileName) {
         return renameFileInDir(oldFileName, newFileName, this);
     }
-    async file(fileName, options) {
-        const findFile = await this.findFileByPath(fileName);
+    async file(path, options) {
+        const findFile = await this.findFileByPath(path);
         if (findFile) {
             return findFile;
         }
-        const fileHandle = await this.directoryHandler.getFileHandle(fileName, options);
+        const dir = await this.getDirForFilePath(path);
+        const fileName = path.split('/').pop();
+        const fileHandle = await dir.directoryHandler.getFileHandle(fileName, options);
         return new BrowserDmFileReader(fileHandle, this);
     }
     async findFileByPath(path, directoryHandler = this.directoryHandler) {
-        if (!this.files.length) {
-            return;
-        }
         const pathSplit = path.split('/');
-        const fileName = pathSplit[pathSplit.length - 1];
+        const fileName = pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
         // chrome we dig through the first selected directory and search the subs
-        if (pathSplit.length > 1) {
-            const lastParent = pathSplit.shift(); // remove index 0 of lastParent/firstParent/file.xyz
-            const newHandler = await directoryHandler.getDirectoryHandle(lastParent);
-            if (!newHandler) {
-                console.debug('no matching upper folder', lastParent, directoryHandler);
-                return;
-            }
-            const newPath = pathSplit.join('/');
-            const dirMan = await this.getDirectory(lastParent);
-            return dirMan.findFileByPath(newPath, newHandler);
+        if (pathSplit.length) {
+            const dir = await this.getDirectory(pathSplit.join('/'));
+            directoryHandler = dir.directoryHandler;
         }
         let files = this.files;
-        if (directoryHandler) {
-            files = await directoryReadToArray(directoryHandler);
-        }
+        files = await directoryReadToArray(directoryHandler);
         const likeFile = files.find(file => file.name === fileName);
         if (!likeFile) {
             return;
@@ -249,6 +249,11 @@ class BrowserDirectoryManager {
         // when found, convert to File
         // const file = await this.getSystemFile(likeFile)
         return new BrowserDmFileReader(likeFile, this);
+    }
+    async getDirForFilePath(path) {
+        const pathSplit = path.split('/');
+        pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
+        return await this.getDirectory(pathSplit.join('/'));
     }
 }
 
