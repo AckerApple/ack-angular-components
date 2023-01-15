@@ -213,7 +213,7 @@ class BrowserDirectoryManager {
     }
     listFiles() {
         return __awaiter(this, void 0, void 0, function* () {
-            const items = yield this.list();
+            const items = yield directoryReadToArray(this.directoryHandler);
             return items.filter((file) => file.kind === 'file')
                 .map((file) => file.name);
         });
@@ -239,7 +239,7 @@ class BrowserDirectoryManager {
             if (!newPath) {
                 return this;
             }
-            const newPathArray = newPath.split('/');
+            const newPathArray = newPath.split(/\\|\//);
             let fullNewPath = this.path;
             let dir;
             try {
@@ -262,7 +262,7 @@ class BrowserDirectoryManager {
     }
     removeEntry(name, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            const split = name.split('/');
+            const split = name.split(/\\|\//);
             const lastName = split.pop(); // remove last item
             const dir = split.length >= 1 ? yield this.getDirectory(split.join('/')) : this;
             return dir.directoryHandler.removeEntry(lastName, options);
@@ -280,14 +280,14 @@ class BrowserDirectoryManager {
                 return findFile;
             }
             const dir = yield this.getDirForFilePath(path);
-            const fileName = path.split('/').pop();
+            const fileName = path.split(/\\|\//).pop();
             const fileHandle = yield dir.directoryHandler.getFileHandle(fileName, options);
             return new BrowserDmFileReader(fileHandle, this);
         });
     }
     findFileByPath(path, directoryHandler = this.directoryHandler) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pathSplit = path.split('/');
+            const pathSplit = path.split(/\\|\//);
             const fileName = pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
             // chrome we dig through the first selected directory and search the subs
             if (pathSplit.length) {
@@ -307,7 +307,7 @@ class BrowserDirectoryManager {
     }
     getDirForFilePath(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pathSplit = path.split('/');
+            const pathSplit = path.split(/\\|\//);
             pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
             return yield this.getDirectory(pathSplit.join('/'));
         });
@@ -324,7 +324,7 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
         super();
         this.filePath = filePath;
         this.directory = directory;
-        this.name = filePath.split('/').pop();
+        this.name = filePath.split(/\\|\//).pop();
     }
     stats() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -400,6 +400,9 @@ class NeutralinoDirectoryManager {
     }
     getDirectory(newPath) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!newPath) {
+                return this;
+            }
             const pathTo = path.join(this.path, newPath);
             // ensure path exists
             yield Neutralino.filesystem.readDirectory(pathTo);
@@ -426,9 +429,12 @@ class NeutralinoDirectoryManager {
     }
     removeEntry(name) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pathTo = path.join(this.path, name);
-            const file = yield this.findFileByPath(pathTo);
-            if (file) {
+            const split = name.split(/\\|\//);
+            const lastName = split.pop(); // remove last item
+            const dir = split.length >= 1 ? yield this.getDirectory(split.join('/')) : this;
+            const pathTo = path.join(dir.path, name);
+            const fileNames = yield dir.listFiles();
+            if (fileNames.includes(lastName)) {
                 return Neutralino.filesystem.removeFile(pathTo);
             }
             yield Neutralino.filesystem.removeDirectory(pathTo);
