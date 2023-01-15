@@ -115,7 +115,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
   }
   
   async listFiles(): Promise<string[]> {
-    const items = await this.list() as any
+    const items = await directoryReadToArray(this.directoryHandler)
     return items.filter((file: any) => file.kind === 'file')
       .map((file: any) => file.name)
   }
@@ -145,7 +145,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
       return this
     }
 
-    const newPathArray = newPath.split('/')
+    const newPathArray = newPath.split(/\\|\//)
     let fullNewPath = this.path
     let dir: FileSystemDirectoryHandle
 
@@ -175,7 +175,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
     name: string,
     options?: { recursive: boolean }
   ): Promise<void> {
-    const split = name.split('/')
+    const split = name.split(/\\|\//)
     const lastName = split.pop() as string // remove last item
     const dir = split.length >= 1 ? await this.getDirectory( split.join('/') ) : this
     return dir.directoryHandler.removeEntry(lastName, options)
@@ -195,7 +195,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
     }
 
     const dir = await this.getDirForFilePath(path) as BrowserDirectoryManager
-    const fileName = path.split('/').pop() as string
+    const fileName = path.split(/\\|\//).pop() as string
 
     const fileHandle = await dir.directoryHandler.getFileHandle(fileName, options)
     return new BrowserDmFileReader(fileHandle, this)
@@ -205,7 +205,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
     path: string,
     directoryHandler: any = this.directoryHandler,
   ): Promise<BrowserDmFileReader | undefined> {
-    const pathSplit = path.split('/')
+    const pathSplit = path.split(/\\|\//)
     const fileName = pathSplit.pop() // pathSplit[ pathSplit.length-1 ]
 
     // chrome we dig through the first selected directory and search the subs
@@ -227,7 +227,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
   }
   
   async getDirForFilePath(path: string) {
-    const pathSplit = path.split('/')
+    const pathSplit = path.split(/\\|\//)
     pathSplit.pop() as string // pathSplit[ pathSplit.length-1 ]
   
     return await this.getDirectory( pathSplit.join('/') )

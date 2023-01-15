@@ -28,7 +28,7 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
     public directory: NeutralinoDirectoryManager,
   ) {
     super()
-    this.name = filePath.split('/').pop() as string
+    this.name = filePath.split(/\\|\//).pop() as string
   }
 
   async stats() {
@@ -106,6 +106,10 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
   }
 
   async getDirectory(newPath: string) {
+    if ( !newPath ) {
+      return this
+    }
+    
     const pathTo = path.join(this.path, newPath)
     
     // ensure path exists
@@ -141,10 +145,14 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
     name: string,
     // options?: { recursive: boolean }
   ): Promise<void> {
-    const pathTo = path.join(this.path, name)
+    const split = name.split(/\\|\//)
+    const lastName = split.pop() as string // remove last item
+    const dir = split.length >= 1 ? await this.getDirectory( split.join('/') ) : this
+
+    const pathTo = path.join(dir.path, name)
     
-    const file = await this.findFileByPath(pathTo)
-    if ( file ) {
+    const fileNames = await dir.listFiles()
+    if ( fileNames.includes(lastName) ) {
       return Neutralino.filesystem.removeFile(pathTo)
     }
     
