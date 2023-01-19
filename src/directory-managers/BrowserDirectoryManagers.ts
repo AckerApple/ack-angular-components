@@ -61,7 +61,7 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
   override readAsText(): Promise<string> {
     return new Promise(async (res, rej) => {
       try {
-        var reader = new FileReader()
+        const reader = new FileReader()
         const file = await this.getRealFile()
         reader.readAsText(file)
         reader.onload = () => res(reader.result as string)
