@@ -207,10 +207,11 @@ export class BrowserDirectoryManager implements DirectoryManager {
   ): Promise<BrowserDmFileReader | undefined> {
     const pathSplit = path.split(/\\|\//)
     const fileName = pathSplit.pop() // pathSplit[ pathSplit.length-1 ]
+    let dir: BrowserDirectoryManager = this
 
     // chrome we dig through the first selected directory and search the subs
     if ( pathSplit.length ) {
-      const dir = await this.getDirectory( pathSplit.join('/') )
+      dir = await this.getDirectory( pathSplit.join('/') )
       directoryHandler = dir.directoryHandler
     }
     
@@ -223,7 +224,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
     
     // when found, convert to File
     // const file = await this.getSystemFile(likeFile)
-    return new BrowserDmFileReader(likeFile, this)
+    return new BrowserDmFileReader(likeFile, dir)
   }
   
   async getDirForFilePath(path: string) {
