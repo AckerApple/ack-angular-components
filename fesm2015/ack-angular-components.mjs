@@ -289,9 +289,10 @@ class BrowserDirectoryManager {
         return __awaiter(this, void 0, void 0, function* () {
             const pathSplit = path.split(/\\|\//);
             const fileName = pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
+            let dir = this;
             // chrome we dig through the first selected directory and search the subs
             if (pathSplit.length) {
-                const dir = yield this.getDirectory(pathSplit.join('/'));
+                dir = yield this.getDirectory(pathSplit.join('/'));
                 directoryHandler = dir.directoryHandler;
             }
             let files = this.files;
@@ -302,7 +303,7 @@ class BrowserDirectoryManager {
             }
             // when found, convert to File
             // const file = await this.getSystemFile(likeFile)
-            return new BrowserDmFileReader(likeFile, this);
+            return new BrowserDmFileReader(likeFile, dir);
         });
     }
     getDirForFilePath(path) {
