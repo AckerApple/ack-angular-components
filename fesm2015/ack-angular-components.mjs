@@ -81,6 +81,14 @@ function renameFileInDir(oldFileName, newFileName, dir) {
         return newFile;
     });
 }
+function getDirForFilePath(path, fromDir, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pathSplit = path.split(/\\|\//);
+        pathSplit.pop(); // remove the file
+        const pathWithoutFile = pathSplit.join('/');
+        return yield fromDir.getDirectory(pathWithoutFile, options);
+    });
+}
 
 function directoryReadToArray(
 // directory: FileSystemFileHandle[] //LikeFile[]
@@ -165,6 +173,7 @@ class BrowserDmFileReader extends BaseDmFileReader {
             try {
                 const reader = new FileReader();
                 const file = yield this.getRealFile();
+                reader.readAsArrayBuffer;
                 reader.readAsText(file);
                 reader.onload = () => res(reader.result);
             }
@@ -255,6 +264,7 @@ class BrowserDirectoryManager {
             catch (err) {
                 throw new Error(err.message + `. ${newPath} not found in ${this.name} (${this.path})`);
             }
+            // TODO: We may not need to read files in advanced (originally we did this for safari)
             const files = yield directoryReadToArray(dir);
             const newDir = new BrowserDirectoryManager(fullNewPath, files, dir);
             return newDir;
@@ -264,7 +274,8 @@ class BrowserDirectoryManager {
         return __awaiter(this, void 0, void 0, function* () {
             const split = name.split(/\\|\//);
             const lastName = split.pop(); // remove last item
-            const dir = split.length >= 1 ? yield this.getDirectory(split.join('/')) : this;
+            const subDir = split.length >= 1;
+            const dir = (subDir ? yield this.getDirectory(split.join('/')) : this);
             return dir.directoryHandler.removeEntry(lastName, options);
         });
     }
@@ -279,10 +290,11 @@ class BrowserDirectoryManager {
             if (findFile) {
                 return findFile;
             }
-            const dir = yield this.getDirForFilePath(path);
+            const dirOptions = { create: options === null || options === void 0 ? void 0 : options.create };
+            const dir = yield getDirForFilePath(path, this, dirOptions);
             const fileName = path.split(/\\|\//).pop();
             const fileHandle = yield dir.directoryHandler.getFileHandle(fileName, options);
-            return new BrowserDmFileReader(fileHandle, this);
+            return new BrowserDmFileReader(fileHandle, dir);
         });
     }
     findFileByPath(path, directoryHandler = this.directoryHandler) {
@@ -292,7 +304,11 @@ class BrowserDirectoryManager {
             let dir = this;
             // chrome we dig through the first selected directory and search the subs
             if (pathSplit.length) {
-                dir = yield this.getDirectory(pathSplit.join('/'));
+                const findDir = yield this.findDirectory(pathSplit.join('/'));
+                if (!findDir) {
+                    return;
+                }
+                dir = findDir;
                 directoryHandler = dir.directoryHandler;
             }
             let files = this.files;
@@ -304,13 +320,6 @@ class BrowserDirectoryManager {
             // when found, convert to File
             // const file = await this.getSystemFile(likeFile)
             return new BrowserDmFileReader(likeFile, dir);
-        });
-    }
-    getDirForFilePath(path) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pathSplit = path.split(/\\|\//);
-            pathSplit.pop(); // pathSplit[ pathSplit.length-1 ]
-            return yield this.getDirectory(pathSplit.join('/'));
         });
     }
 }
@@ -394,30 +403,81 @@ class NeutralinoDirectoryManager {
     }
     createDirectory(newPath) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pathTo = path.join(this.path, newPath);
-            yield Neutralino.filesystem.createDirectory(pathTo);
-            return this.getDirectory(newPath);
+            try {
+                const fullPath = path.join(this.path, convertSlashes(newPath));
+                yield Neutralino.filesystem.readDirectory(fullPath);
+                // it exists, just read it
+                return this.getDirectory(newPath);
+            }
+            catch (err) {
+                if (err.code === 'NE_FS_NOPATHE') {
+                    const splitPath = convertSlashes(newPath).split('/');
+                    let pathTo = this.path;
+                    while (splitPath.length) {
+                        const nowName = splitPath.shift();
+                        pathTo = path.join(pathTo, nowName);
+                        yield Neutralino.filesystem.createDirectory(pathTo);
+                    }
+                    const fullPath = pathTo; // path.join(this.path, newPath)
+                    return new NeutralinoDirectoryManager(fullPath);
+                }
+                throw err;
+            }
         });
     }
-    getDirectory(newPath) {
+    getDirectory(newPath, options) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!newPath) {
                 return this;
             }
             const pathTo = path.join(this.path, newPath);
-            // ensure path exists
-            yield Neutralino.filesystem.readDirectory(pathTo);
-            return new NeutralinoDirectoryManager(pathTo);
+            try {
+                // ensure path exists
+                yield Neutralino.filesystem.readDirectory(pathTo);
+                return new NeutralinoDirectoryManager(pathTo);
+            }
+            catch (err) {
+                if (err.code === 'NE_FS_NOPATHE' && (options === null || options === void 0 ? void 0 : options.create)) {
+                    return this.createDirectory(newPath);
+                }
+                throw err; // rethrow
+            }
         });
     }
-    findFileByPath(filePath) {
+    findFileByPath(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            const fullFilePath = this.getFullPath(filePath);
-            return new NeutralinoDmFileReader(fullFilePath, this);
+            const pathSplit = path.split(/\\|\//);
+            const fileName = pathSplit.pop().toLowerCase(); // pathSplit[ pathSplit.length-1 ]
+            let dir = this;
+            // chrome we dig through the first selected directory and search the subs
+            if (pathSplit.length) {
+                const findDir = yield this.findDirectory(pathSplit.join('/'));
+                if (!findDir) {
+                    return;
+                }
+                dir = findDir;
+            }
+            const files = yield dir.listFiles();
+            const matchName = files.find(listName => listName.toLowerCase() === fileName);
+            if (!matchName) {
+                return;
+            }
+            const fullPath = dir.getFullPath(matchName);
+            return new NeutralinoDmFileReader(fullPath, dir);
         });
     }
-    file(fileName, _options) {
-        return this.findFileByPath(fileName);
+    file(pathTo, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existingFile = yield this.findFileByPath(pathTo);
+            if (existingFile) {
+                return existingFile;
+            }
+            const dirOptions = { create: options === null || options === void 0 ? void 0 : options.create };
+            const dir = yield getDirForFilePath(pathTo, this, dirOptions);
+            const fileName = pathTo.split(/\\|\//).pop();
+            const fullPath = path.join(dir.path, fileName);
+            return new NeutralinoDmFileReader(fullPath, dir);
+        });
     }
     getFullPath(itemPath) {
         let fullFilePath = path.join(this.path, itemPath);
@@ -428,20 +488,45 @@ class NeutralinoDirectoryManager {
             return renameFileInDir(oldFileName, newFileName, this);
         });
     }
-    removeEntry(name) {
+    removeEntry(name, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const split = name.split(/\\|\//);
             const lastName = split.pop(); // remove last item
             const dir = split.length >= 1 ? yield this.getDirectory(split.join('/')) : this;
-            const pathTo = path.join(dir.path, name);
+            const pathTo = path.join(dir.path, lastName);
             const fileNames = yield dir.listFiles();
             if (fileNames.includes(lastName)) {
                 return Neutralino.filesystem.removeFile(pathTo);
             }
-            yield Neutralino.filesystem.removeDirectory(pathTo);
+            try {
+                yield Neutralino.filesystem.removeDirectory(pathTo);
+            }
+            catch (err) {
+                // if folder delete failed, it may have items within Neutralino does not have recursive delete
+                if (err.code === 'NE_FS_RMDIRER' && (options === null || options === void 0 ? void 0 : options.recursive)) {
+                    return recurseRemoveDir(yield dir.getDirectory(lastName));
+                }
+                throw err;
+            }
             return;
         });
     }
+}
+function recurseRemoveDir(dir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // remove all folders within
+        const folders = yield dir.getFolders();
+        for (const subdir of folders) {
+            yield recurseRemoveDir(subdir);
+        }
+        // remove all files within
+        const list = yield dir.listFiles();
+        for (const fileName of list) {
+            yield dir.removeEntry(fileName);
+        }
+        // try now to delete again
+        return Neutralino.filesystem.removeDirectory(dir.path);
+    });
 }
 
 class SafariDirectoryManager {

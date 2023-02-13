@@ -26,7 +26,7 @@ export interface FileStats {
 export interface DmFileReader {
     directory: DirectoryManager;
     name: string;
-    write: (fileString: string) => Promise<void>;
+    write: (fileString: string | ArrayBuffer) => Promise<void>;
     readAsText: () => Promise<string>;
     readAsJson: () => Promise<Object>;
     readAsDataURL: () => Promise<string>;
@@ -47,3 +47,4 @@ export declare class BaseDmFileReader {
 export declare function getNameByPath(path: string): string;
 export declare function findDirectoryWithin(path: string, inDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;
 export declare function renameFileInDir(oldFileName: string, newFileName: string, dir: DirectoryManager): Promise<DmFileReader>;
+export declare function getDirForFilePath(path: string, fromDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager>;
