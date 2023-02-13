@@ -1,4 +1,4 @@
-import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
+import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getDirForFilePath, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { directoryReadToArray } from "./directoryReadToArray.function"
 import { path } from "./path"
 
@@ -17,7 +17,7 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
     return this.getRealFile()
   }
 
-  async write(fileString: string) {
+  async write(fileString: string | ArrayBuffer) {
     let writableStream: any
     const likeFile: any = this.file
     const hasPermission = likeFile.queryPermission && await likeFile.queryPermission() === 'granted'
@@ -63,6 +63,7 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
       try {
         const reader = new FileReader()
         const file = await this.getRealFile()
+        reader.readAsArrayBuffer
         reader.readAsText(file)
         reader.onload = () => res(reader.result as string)
       } catch (err) {
@@ -99,8 +100,8 @@ export class BrowserDirectoryManager implements DirectoryManager {
   findDirectory (
     path: string,
     options?: FileSystemGetDirectoryOptions,
-  ): Promise<DirectoryManager | undefined> {
-    return findDirectoryWithin(path, this, options)
+  ): Promise<BrowserDirectoryManager | undefined> {
+    return findDirectoryWithin(path, this, options) as Promise<BrowserDirectoryManager | undefined>
   }
   
   async list(): Promise<string[]> {
@@ -120,11 +121,11 @@ export class BrowserDirectoryManager implements DirectoryManager {
       .map((file: any) => file.name)
   }
   
-  async getFolders(): Promise<BrowserDirectoryManager[]> {
+  async getFolders(): Promise<DirectoryManager[]> {
     const names = await this.listFolders()
     return Promise.all(
       names.map(async name => await this.getDirectory(name))
-    )
+    ) as Promise<DirectoryManager[]>
   }
   
   async getFiles(): Promise<DmFileReader[]> {
@@ -133,7 +134,9 @@ export class BrowserDirectoryManager implements DirectoryManager {
       .map(file => new BrowserDmFileReader(file, this))
   }
 
-  createDirectory(newPath: string) {
+  createDirectory(
+    newPath: string
+  ): Promise<DirectoryManager> {
     return this.getDirectory(newPath, { create: true })
   }
 
@@ -162,6 +165,7 @@ export class BrowserDirectoryManager implements DirectoryManager {
       throw new Error(err.message + `. ${newPath} not found in ${this.name} (${this.path})`)
     }
 
+    // TODO: We may not need to read files in advanced (originally we did this for safari)
     const files: FileSystemFileHandle[] = await directoryReadToArray(dir)
     const newDir = new BrowserDirectoryManager(
       fullNewPath,
@@ -177,28 +181,33 @@ export class BrowserDirectoryManager implements DirectoryManager {
   ): Promise<void> {
     const split = name.split(/\\|\//)
     const lastName = split.pop() as string // remove last item
-    const dir = split.length >= 1 ? await this.getDirectory( split.join('/') ) : this
+    const subDir = split.length >= 1
+    const dir = (subDir ? await this.getDirectory( split.join('/') ) : this) as BrowserDirectoryManager
     return dir.directoryHandler.removeEntry(lastName, options)
   }
 
   async renameFile(
     oldFileName: string,
     newFileName: string
-  ) {
+  ): Promise<DmFileReader> {
     return renameFileInDir(oldFileName, newFileName, this)
   }
 
-  async file(path: string, options?: FileSystemGetFileOptions) {
+  async file(
+    path: string,
+    options?: FileSystemGetFileOptions,
+  ): Promise<DmFileReader> {
     const findFile = await this.findFileByPath(path)
     if ( findFile ) {
       return findFile
     }
 
-    const dir = await this.getDirForFilePath(path) as BrowserDirectoryManager
+    const dirOptions = { create: options?.create }
+    const dir = await getDirForFilePath(path, this, dirOptions) as BrowserDirectoryManager
     const fileName = path.split(/\\|\//).pop() as string
 
     const fileHandle = await dir.directoryHandler.getFileHandle(fileName, options)
-    return new BrowserDmFileReader(fileHandle, this)
+    return new BrowserDmFileReader(fileHandle, dir)
   }
 
   async findFileByPath(
@@ -211,7 +220,13 @@ export class BrowserDirectoryManager implements DirectoryManager {
 
     // chrome we dig through the first selected directory and search the subs
     if ( pathSplit.length ) {
-      dir = await this.getDirectory( pathSplit.join('/') )
+      const findDir = await this.findDirectory( pathSplit.join('/') )
+      
+      if ( !findDir ) {
+        return
+      }
+
+      dir = findDir
       directoryHandler = dir.directoryHandler
     }
     
@@ -225,13 +240,5 @@ export class BrowserDirectoryManager implements DirectoryManager {
     // when found, convert to File
     // const file = await this.getSystemFile(likeFile)
     return new BrowserDmFileReader(likeFile, dir)
-  }
-  
-  async getDirForFilePath(path: string) {
-    const pathSplit = path.split(/\\|\//)
-    pathSplit.pop() as string // pathSplit[ pathSplit.length-1 ]
-  
-    return await this.getDirectory( pathSplit.join('/') )
-  }
+  }  
 }
-

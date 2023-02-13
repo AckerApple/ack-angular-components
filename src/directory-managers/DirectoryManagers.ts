@@ -4,9 +4,16 @@ export interface DirectoryManager {
   name: string
   path: string
 
-  createDirectory: (path: string) => Promise<DirectoryManager>
+  createDirectory: (
+    path: string
+  ) => Promise<DirectoryManager>
+
   // should throw error if directory does not exist
-  getDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager>
+  getDirectory: (
+    path: string,
+    options?: FileSystemGetDirectoryOptions
+  ) => Promise<DirectoryManager>
+  
   // should return undefined if directory does not exist
   findDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager | undefined>
   
@@ -17,10 +24,21 @@ export interface DirectoryManager {
   getFolders: () => Promise<DirectoryManager[]>
   getFiles: () => Promise<DmFileReader[]>
   findFileByPath: (path: string) => Promise<DmFileReader | undefined>
-  file: (fileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>
-  renameFile: (oldFileName: string, newfileName: string, options?: FileSystemGetFileOptions) => Promise<DmFileReader>
+  file: (
+    fileName: string,
+    options?: FileSystemGetFileOptions
+  ) => Promise<DmFileReader>
 
-  removeEntry: (name: string, options?: { recursive: boolean }) => Promise<void>
+  renameFile: (
+    oldFileName: string,
+    newfileName: string,
+    options?: FileSystemGetFileOptions
+  ) => Promise<DmFileReader>
+
+  removeEntry: (
+    name: string,
+    options?: { recursive: boolean }
+  ) => Promise<void>
 }
 
 export interface FileStats {
@@ -34,7 +52,7 @@ export interface FileStats {
 export interface DmFileReader {
   directory: DirectoryManager
   name: string
-  write: (fileString: string) => Promise<void>
+  write: (fileString: string | ArrayBuffer) => Promise<void>
   readAsText: () => Promise<string>
   readAsJson: () => Promise<Object>
   readAsDataURL: () => Promise<string>
@@ -121,4 +139,16 @@ export async function renameFileInDir(
   await newFile.write(data)
   await dir.removeEntry(oldFileName)
   return newFile
+}
+
+export async function getDirForFilePath(
+  path: string,
+  fromDir: DirectoryManager,
+  options?: FileSystemGetDirectoryOptions,
+) {
+  const pathSplit = path.split(/\\|\//)
+  pathSplit.pop() as string // remove the file
+  const pathWithoutFile = pathSplit.join('/')
+
+  return await fromDir.getDirectory(pathWithoutFile, options)
 }
