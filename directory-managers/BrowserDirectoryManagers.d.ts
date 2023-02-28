@@ -1,15 +1,6 @@
-import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers";
-export declare class BrowserDmFileReader extends BaseDmFileReader implements DmFileReader {
-    file: File | FileSystemFileHandle;
-    directory: DirectoryManager;
-    name: string;
-    constructor(file: File | FileSystemFileHandle, directory: DirectoryManager);
-    stats(): Promise<File>;
-    write(fileString: string | ArrayBuffer): Promise<void>;
-    private getRealFile;
-    readAsText(): Promise<string>;
-    readAsDataURL(): Promise<string>;
-}
+import { BrowserDmFileReader } from "./BrowserDmFileReader";
+import { DirectoryManager } from "./DirectoryManagers";
+import { DmFileReader } from "./DmFileReader";
 export declare class BrowserDirectoryManager implements DirectoryManager {
     path: string;
     files: FileSystemFileHandle[];

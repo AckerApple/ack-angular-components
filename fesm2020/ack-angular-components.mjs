@@ -3,6 +3,55 @@ import { EventEmitter, Component, Input, Output, NgModule } from '@angular/core'
 import * as i1 from '@angular/common';
 import { CommonModule } from '@angular/common';
 
+/**  This function reads a file from the user's file system and returns an Observable that emits slices of the file
+ * TODO: Needs an abort
+*/
+function readFileStream(file, chunkSize = 1024 * 1024, // 1MB,
+eachString = (string) => undefined) {
+    const fileSize = file.size;
+    let offset = 0;
+    return new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            if (event.target?.result) {
+                const string = event.target.result;
+                const isLast = (offset + chunkSize) >= fileSize;
+                const percent = offset / fileSize * 100;
+                eachString(string, { isLast, percent, offset });
+                // increment
+                offset += chunkSize;
+            }
+            if (offset < fileSize) {
+                readSlice();
+            }
+            else {
+                res();
+            }
+        };
+        reader.onerror = rej;
+        function readSlice() {
+            const slice = file.slice(offset, offset + chunkSize);
+            reader.readAsText(slice);
+        }
+        readSlice();
+        // return () => reader.abort()
+    });
+}
+async function readWriteFile$1(file, fileHandle, transformFn, chunkSize = 1024 * 1024) {
+    const writableStream = await fileHandle.createWritable(); // Open a writable stream for the file
+    const onString = async (string, { isLast, percent, offset }) => {
+        const newString = await transformFn(string, {
+            isLast, percent, offset,
+        });
+        const result = {
+            string: newString, offset,
+        };
+        return writableStream.write(result.string);
+    };
+    await file.readTextStream(onString, chunkSize);
+    await writableStream.close();
+}
+
 function stringToXml(string) {
     return new DOMParser().parseFromString(string.trim(), "text/xml");
 }
@@ -32,6 +81,89 @@ class BaseDmFileReader {
         throw new Error('no override provided for BaseDmFileReader.readAsText');
     }
 }
+
+class BrowserDmFileReader extends BaseDmFileReader {
+    constructor(file, directory) {
+        super();
+        this.file = file;
+        this.directory = directory;
+        this.name = file.name;
+    }
+    async stats() {
+        return this.getRealFile();
+    }
+    async readTextStream(callback, chunkSize = 1024) {
+        const file = await this.getRealFile();
+        return readFileStream(file, chunkSize, callback);
+    }
+    async readWriteTextStream(callback, chunkSize = 1024 * 1024) {
+        const handle = this.file;
+        return readWriteFile$1(this, handle, callback, chunkSize);
+    }
+    async write(fileString) {
+        let writableStream;
+        const likeFile = this.file;
+        const hasPermission = likeFile.queryPermission && await likeFile.queryPermission() === 'granted';
+        if (hasPermission) {
+            writableStream = await likeFile.createWritable();
+        }
+        else {
+            // request where to save
+            const id = this.name.replace(/[^a-zA-Z0-9]/g, '-') + '-filePicker';
+            const savePickerOptions = {
+                suggestedName: this.name,
+                /*
+                // todo: may need to use mime types
+                types: [{
+                  description: 'JSON',
+                  accept: {
+                    'application/json': ['.json'],
+                  },
+                }],
+                */
+            };
+            savePickerOptions.id = id.slice(0, 32);
+            const handle = await window.showSaveFilePicker(savePickerOptions);
+            writableStream = await handle.createWritable();
+        }
+        // write our file
+        await writableStream.write(fileString);
+        // close the file and write the contents to disk.
+        await writableStream.close();
+    }
+    async getRealFile() {
+        const file = this.file;
+        return file.getFile ? await file.getFile() : Promise.resolve(file);
+    }
+    readAsText() {
+        return new Promise(async (res, rej) => {
+            try {
+                const reader = new FileReader();
+                const file = await this.getRealFile();
+                reader.readAsArrayBuffer;
+                reader.readAsText(file);
+                reader.onload = () => res(reader.result);
+            }
+            catch (err) {
+                rej(err);
+            }
+        });
+    }
+    readAsDataURL() {
+        return new Promise(async (res, rej) => {
+            try {
+                var reader = new FileReader();
+                const file = await this.getRealFile();
+                reader.readAsDataURL(file);
+                reader.onload = () => res(reader.result);
+            }
+            catch (err) {
+                rej(err);
+            }
+        });
+    }
+}
+
 function getNameByPath(path) {
     const half = path.split(/\//).pop();
     return half.split(/\\/).pop();
@@ -89,76 +221,6 @@ const path = {
     }
 };
 
-class BrowserDmFileReader extends BaseDmFileReader {
-    constructor(file, directory) {
-        super();
-        this.file = file;
-        this.directory = directory;
-        this.name = file.name;
-    }
-    async stats() {
-        return this.getRealFile();
-    }
-    async write(fileString) {
-        let writableStream;
-        const likeFile = this.file;
-        const hasPermission = likeFile.queryPermission && await likeFile.queryPermission() === 'granted';
-        if (hasPermission) {
-            writableStream = await likeFile.createWritable();
-        }
-        else {
-            // request where to save
-            const id = this.name.replace(/[^a-zA-Z0-9]/g, '-') + '-filePicker';
-            const savePickerOptions = {
-                suggestedName: this.name,
-                /*types: [{
-                  description: 'JSON',
-                  accept: {
-                    'application/json': ['.json'],
-                  },
-                }],*/
-            };
-            savePickerOptions.id = id.slice(0, 32);
-            const handle = await window.showSaveFilePicker(savePickerOptions);
-            writableStream = await handle.createWritable();
-        }
-        // write our file
-        await writableStream.write(fileString);
-        // close the file and write the contents to disk.
-        await writableStream.close();
-    }
-    async getRealFile() {
-        const file = this.file;
-        return file.getFile ? await file.getFile() : Promise.resolve(file);
-    }
-    readAsText() {
-        return new Promise(async (res, rej) => {
-            try {
-                const reader = new FileReader();
-                const file = await this.getRealFile();
-                reader.readAsArrayBuffer;
-                reader.readAsText(file);
-                reader.onload = () => res(reader.result);
-            }
-            catch (err) {
-                rej(err);
-            }
-        });
-    }
-    readAsDataURL() {
-        return new Promise(async (res, rej) => {
-            try {
-                var reader = new FileReader();
-                const file = await this.getRealFile();
-                reader.readAsDataURL(file);
-                reader.onload = () => res(reader.result);
-            }
-            catch (err) {
-                rej(err);
-            }
-        });
-    }
-}
 class BrowserDirectoryManager {
     constructor(path, files, // LikeFile[],
     directoryHandler) {
@@ -272,6 +334,103 @@ function convertSlashes(string) {
 }
 
 const fs = typeof Neutralino === 'object' ? Neutralino.filesystem : {};
+/** Read a file in streams awaiting a callback to process each stream before reading another */
+async function readTextStream(filePath, callback, 
+// Below, if number is too low, Neutralino witnessed will fail NE_RT_NATRTER (hopefully its not a specific number used versus how much is available to stream in targeted file)
+chunkSize = 1024 * 18) {
+    return new Promise(async (res, rej) => {
+        let offset = 0;
+        const stats = await fs.getStats(filePath);
+        const size = stats.size;
+        if (chunkSize > size) {
+            chunkSize = size;
+        }
+        let close = () => {
+            Neutralino.events.off('openedFile', dataCallback);
+            res(undefined);
+            // prevent calling callbacks twice by redeclaring them
+            const empty = () => undefined;
+            close = empty;
+            dataCallback = empty;
+        };
+        // main callback used to read each stream of data. On close of stream, its re-declared as an empty function
+        let dataCallback = (evt) => {
+            if (evt.detail.id != fileId) {
+                return; // this call is not for us
+            }
+            switch (evt.detail.action) {
+                case 'data':
+                    const isLast = (offset + chunkSize) >= size;
+                    const percent = offset / size * 100;
+                    const string = evt.detail.data;
+                    try {
+                        // if callback return promise, wait for it
+                        return Promise.resolve(callback(string, { offset, isLast, percent }))
+                            .then(() => {
+                            offset = offset + chunkSize; // increase for next iteration
+                            // are we done or shall we trigger the next read?
+                            isLast ? close() : read();
+                        });
+                    }
+                    catch (err) {
+                        rej(err);
+                        return close(); // error should force everything to stop
+                    }
+                case 'end':
+                    close(); // indication of done by Neutralino
+                    return;
+            }
+        };
+        // used at every time we are ready to continue reading
+        const read = async () => {
+            try {
+                // no await here needed (dataCallback will be called)
+                await Neutralino.filesystem.updateOpenedFile(fileId, 'read', chunkSize);
+            }
+            catch (err) {
+                rej(err);
+                close();
+            }
+        };
+        // Create a callback calling callback so incase we need to prevent further calls we can switch out the first callback
+        const realCallback = (evt) => dataCallback(evt);
+        // start the actual processing
+        Neutralino.events.on('openedFile', realCallback);
+        const fileId = await Neutralino.filesystem.openFile(filePath);
+        read();
+    });
+}
+/** Read a file in streams awaiting a callback to provide a string to write as new content for the original read file
+ * 1. A blank file is created
+ * 2. Original file is read in streams
+ * 3. Result from callback is appended to the file in step 1
+ * 4. When all of file is read we rename the original file
+ * 5. The file we append all results to, is renamed to the original files name
+ * 6. The original file, that was renamed, is now deleted
+ * - All of the above must be performed as Neutralino does not support stream writing like the browser does
+*/
+async function readWriteFile(filePath, callback, chunkSize = 1024 * 18 // Too low a number, can error. More details in file search for "chunkSize" in this file
+) {
+    const cloneFullPath = filePath + '.writing';
+    // create an empty file we will stream results into
+    await Neutralino.filesystem.writeFile(cloneFullPath, '');
+    // create callback that will handle each part of the stream
+    const midware = (string, stats) => {
+        const newString = callback(string, stats);
+        // no await
+        return Neutralino.filesystem.appendFile(cloneFullPath, newString);
+    };
+    // stream the entire file
+    await readTextStream(filePath, midware, chunkSize);
+    // rename original file just incase any issues with next step(s)
+    const renameFullPath = filePath + '.original';
+    await Neutralino.filesystem.moveFile(filePath, renameFullPath);
+    // rename the file we stream wrote
+    await Neutralino.filesystem.moveFile(cloneFullPath, filePath);
+    // delete original file because we are done
+    await Neutralino.filesystem.removeFile(renameFullPath);
+}
+
 class NeutralinoDmFileReader extends BaseDmFileReader {
     constructor(filePath, directory) {
         super();
@@ -279,10 +438,17 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
         this.directory = directory;
         this.name = filePath.split(/\\|\//).pop();
     }
+    async readTextStream(callback, chunkSize = 82944 // 1024 * 18 because low numbers cause issues
+    ) {
+        return readTextStream(this.filePath, callback, chunkSize);
+    }
     async stats() {
         const stats = await fs.getStats(this.filePath);
-        stats.name = stats.name || this.name;
-        return stats;
+        const castedStats = { ...stats };
+        castedStats.name = castedStats.name || this.name;
+        castedStats.lastModified = stats.modifiedAt;
+        castedStats.type = stats.isFile ? 'file' : 'directory';
+        return castedStats;
     }
     readAsText() {
         return fs.readFile(this.filePath); // .toString()
@@ -294,10 +460,21 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
         var b64encoded = btoa(decoder.decode(view));
         return b64encoded;
     }
+    /**
+     * 1. Creates a file of a similar name and reads from source file
+     * 2. Writes to created via append commands
+     * 3. The original file is renamed on stream end
+     * 4. The new file is named to the original and then original file is then deleted */
+    async readWriteTextStream(callback, chunkSize = 1024 * 1024) {
+        const pathTo = this.directory.path;
+        const fullPath = pathTo + '/' + this.name;
+        return readWriteFile(fullPath, callback, chunkSize);
+    }
     async write(fileString) {
         return fs.writeFile(this.filePath, fileString);
     }
 }
+
 class NeutralinoDirectoryManager {
     constructor(path) {
         this.path = path;
@@ -392,6 +569,7 @@ class NeutralinoDirectoryManager {
         if (existingFile) {
             return existingFile;
         }
+        // TODO: This work should most likely only occur if the options.create flag is present otherwise throw not found error
         const dirOptions = { create: options?.create };
         const dir = await getDirForFilePath(pathTo, this, dirOptions);
         const fileName = pathTo.split(/\\|\//).pop();
@@ -543,7 +721,11 @@ class RobustSelectDirectoryComponent {
     async selectPath() {
         const isNeu = typeof Neutralino === 'object';
         if (isNeu) {
-            let response = await Neutralino.os.showFolderDialog();
+            const options = {};
+            if (this.reloadPath) {
+                options.defaultPath = this.reloadPath;
+            }
+            let response = await Neutralino.os.showFolderDialog('Select LaunchBox directory', options);
             if (response) {
                 this.reloadPath = response;
                 const dm = new NeutralinoDirectoryManager(response);
@@ -573,7 +755,10 @@ class RobustSelectDirectoryComponent {
             }
         }
         // safari
-        this.showDirectoryPicker();
+        if (this.showDirectoryPicker) {
+            this.showDirectoryPicker();
+        }
+        throw new Error('Cannot find supporting functionality to display a directory picker');
     }
     getId() {
         return 'robustFolderPicker-' + this.label;

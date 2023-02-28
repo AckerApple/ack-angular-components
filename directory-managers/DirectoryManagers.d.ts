@@ -1,3 +1,4 @@
+import { DmFileReader } from "./DmFileReader";
 export interface DirectoryManager {
     name: string;
     path: string;
@@ -22,27 +23,6 @@ export interface FileStats {
     name: string;
     size: number;
     type: string;
-}
-export interface DmFileReader {
-    directory: DirectoryManager;
-    name: string;
-    write: (fileString: string | ArrayBuffer) => Promise<void>;
-    readAsText: () => Promise<string>;
-    readAsJson: () => Promise<Object>;
-    readAsDataURL: () => Promise<string>;
-    readAsXml: () => Promise<Document>;
-    readXmlFirstElementByTagName: (tagName: string) => Promise<Element | undefined>;
-    readXmlElementsByTagName: (tagName: string) => Promise<Element[]>;
-    readXmlFirstElementContentByTagName: (tagName: string) => Promise<string | null | undefined>;
-    stats: () => Promise<FileStats>;
-}
-export declare class BaseDmFileReader {
-    readXmlFirstElementContentByTagName(tagName: string): Promise<string | null | undefined>;
-    readXmlElementsByTagName(tagName: string): Promise<Element[]>;
-    readXmlFirstElementByTagName(tagName: string): Promise<Element | undefined>;
-    readAsXml(): Promise<Document>;
-    readAsJson(): Promise<string>;
-    readAsText(): Promise<string>;
 }
 export declare function getNameByPath(path: string): string;
 export declare function findDirectoryWithin(path: string, inDir: DirectoryManager, options?: FileSystemGetDirectoryOptions): Promise<DirectoryManager | undefined>;

@@ -1,14 +1,6 @@
-import { BaseDmFileReader, DirectoryManager, DmFileReader } from "./DirectoryManagers";
-export declare class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileReader {
-    filePath: string;
-    directory: NeutralinoDirectoryManager;
-    name: string;
-    constructor(filePath: string, directory: NeutralinoDirectoryManager);
-    stats(): Promise<any>;
-    readAsText(): Promise<string>;
-    readAsDataURL(): Promise<string>;
-    write(fileString: string | ArrayBuffer): Promise<any>;
-}
+import { DirectoryManager } from "./DirectoryManagers";
+import { DmFileReader } from "./DmFileReader";
+import { NeutralinoDmFileReader } from "./NeutralinoDmFileReader";
 export declare class NeutralinoDirectoryManager implements DirectoryManager {
     path: string;
     name: string;

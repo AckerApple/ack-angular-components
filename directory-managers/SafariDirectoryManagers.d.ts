@@ -1,5 +1,6 @@
-import { DirectoryManager, DmFileReader } from "./DirectoryManagers";
-import { BrowserDmFileReader } from "./BrowserDirectoryManagers";
+import { DirectoryManager } from "./DirectoryManagers";
+import { DmFileReader } from "./DmFileReader";
+import { BrowserDmFileReader } from "./BrowserDmFileReader";
 export declare class SafariDirectoryManager implements DirectoryManager {
     path: string;
     files: File[];
