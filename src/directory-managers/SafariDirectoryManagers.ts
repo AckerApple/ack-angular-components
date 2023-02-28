@@ -1,6 +1,7 @@
-import { DirectoryManager, DmFileReader, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
-import { BrowserDmFileReader } from "./BrowserDirectoryManagers"
+import { DirectoryManager, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { path } from "./path"
+import { DmFileReader } from "./DmFileReader"
+import { BrowserDmFileReader } from "./BrowserDmFileReader"
 
 export class SafariDirectoryManager implements DirectoryManager {
   name: string

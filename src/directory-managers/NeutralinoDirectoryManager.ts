@@ -1,58 +1,11 @@
 import { convertSlashes } from "./convertSlashes"
-import { BaseDmFileReader, DirectoryManager, DmFileReader, findDirectoryWithin, getDirForFilePath, getNameByPath, renameFileInDir } from "./DirectoryManagers"
+import { DirectoryManager, findDirectoryWithin, getDirForFilePath, getNameByPath, renameFileInDir } from "./DirectoryManagers"
+import { DmFileReader } from "./DmFileReader"
+import { INeutralino } from "./Neutralino.utils"
+import { NeutralinoDmFileReader } from "./NeutralinoDmFileReader"
 import { path } from "./path"
 
-interface INeutralino {
-  filesystem: INeutralinoFs
-}
-interface INeutralinoFs {
-  getStats: (path: string) => any
-  readFile: (path: string) => any
-  readBinaryFile: (path: string) => any
-  writeFile: (path: string, data: string | ArrayBuffer) => any
-  removeFile: (path: string) => any
-  removeDirectory: (path: string) => any
-  
-  createDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
-  readDirectory: (path: string) => Promise<{entry: 'FILE' | 'DIRECTORY', type: string}[]>
-}
-
 declare const Neutralino: INeutralino
-const fs = typeof Neutralino === 'object' ? Neutralino.filesystem : {} as INeutralinoFs
-
-export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileReader {
-  name: string
-  
-  constructor(
-    public filePath: string,
-    public directory: NeutralinoDirectoryManager,
-  ) {
-    super()
-    this.name = filePath.split(/\\|\//).pop() as string
-  }
-
-  async stats() {
-    const stats = await fs.getStats(this.filePath)
-    stats.name = stats.name || this.name
-    return stats
-  }
-
-  override readAsText(): Promise<string> {
-    return fs.readFile(this.filePath) // .toString()
-  }
-  
-  async readAsDataURL(): Promise<string> {
-    let data = await fs.readBinaryFile(this.filePath)
-    const view = new Uint8Array(data);
-    var decoder = new TextDecoder('utf8');
-    var b64encoded = btoa(decoder.decode(view))
-    return b64encoded
-  }
-
-  async write(fileString: string | ArrayBuffer) {
-    return fs.writeFile(this.filePath, fileString)
-  }
-}
 
 export class NeutralinoDirectoryManager implements DirectoryManager {
   name: string
@@ -186,6 +139,7 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
       return existingFile
     }
 
+    // TODO: This work should most likely only occur if the options.create flag is present otherwise throw not found error
     const dirOptions = { create: options?.create }
     const dir = await getDirForFilePath(pathTo, this, dirOptions) as NeutralinoDirectoryManager
     const fileName = pathTo.split(/\\|\//).pop() as string

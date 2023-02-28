@@ -1,4 +1,4 @@
-import { stringToXml } from "./stringToXml.function.ts"
+import { DmFileReader } from "./DmFileReader"
 
 export interface DirectoryManager {
   name: string
@@ -15,7 +15,10 @@ export interface DirectoryManager {
   ) => Promise<DirectoryManager>
   
   // should return undefined if directory does not exist
-  findDirectory: (path: string, options?: FileSystemGetDirectoryOptions) => Promise<DirectoryManager | undefined>
+  findDirectory: (
+    path: string,
+    options?: FileSystemGetDirectoryOptions
+  ) => Promise<DirectoryManager | undefined>
   
   list: () => Promise<string[]>
   listFiles: () => Promise<string[]>
@@ -47,51 +50,6 @@ export interface FileStats {
   name: string
   size: number // 788
   type: string // "application/json"
-}
-
-export interface DmFileReader {
-  directory: DirectoryManager
-  name: string
-  write: (fileString: string | ArrayBuffer) => Promise<void>
-  readAsText: () => Promise<string>
-  readAsJson: () => Promise<Object>
-  readAsDataURL: () => Promise<string>
-  readAsXml: () => Promise<Document>
-  readXmlFirstElementByTagName: (tagName: string) => Promise<Element | undefined>
-  readXmlElementsByTagName: (tagName: string) => Promise<Element[]>
-  readXmlFirstElementContentByTagName: (tagName: string) => Promise<string | null | undefined>
-  stats: () => Promise<FileStats>
-}
-
-export class BaseDmFileReader {
-  async readXmlFirstElementContentByTagName(tagName: string): Promise<string | null | undefined> {
-    const elements = await this.readXmlElementsByTagName(tagName)
-    return elements.find(tag => tag.textContent )?.textContent
-  }
-
-  async readXmlElementsByTagName(tagName: string): Promise<Element[]> {
-    const xml = await this.readAsXml()
-    return new Array(...xml.getElementsByTagName(tagName) as any)
-  }
-
-  async readXmlFirstElementByTagName(tagName: string): Promise<Element | undefined> {
-    const xml = await this.readAsXml()
-    const elements = new Array(...xml.getElementsByTagName(tagName) as any)
-    return elements.length ? elements[0] : undefined
-  }
-
-  async readAsXml(): Promise<Document> {
-    const string = await this.readAsText()
-    return stringToXml( string )
-  }
-  
-  async readAsJson(): Promise<string> {
-    return JSON.parse(await this.readAsText())
-  }
-  
-  readAsText(): Promise<string> {
-    throw new Error('no override provided for BaseDmFileReader.readAsText')
-  }
 }
 
 export function getNameByPath(path: string) {

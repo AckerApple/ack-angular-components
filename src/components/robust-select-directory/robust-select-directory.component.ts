@@ -2,10 +2,11 @@ import { Component, EventEmitter, Input, Output } from '@angular/core'
 import { BrowserDirectoryManager } from '../../directory-managers/BrowserDirectoryManagers'
 import { DirectoryManager } from '../../directory-managers/DirectoryManagers'
 import { directoryReadToArray } from '../../directory-managers/directoryReadToArray.function'
+import { FolderDialogOptions, INeutralino } from '../../directory-managers/Neutralino.utils'
 import { NeutralinoDirectoryManager } from '../../directory-managers/NeutralinoDirectoryManager'
 import { SafariDirectoryManager } from '../../directory-managers/SafariDirectoryManagers'
 
-declare const Neutralino: any
+declare const Neutralino: INeutralino
 
 @Component({
   selector: 'robust-select-directory',
@@ -33,7 +34,17 @@ export class RobustSelectDirectoryComponent {
   async selectPath() {
     const isNeu = typeof Neutralino === 'object'
     if ( isNeu ) {
-      let response = await Neutralino.os.showFolderDialog()
+      const options: FolderDialogOptions = {}
+
+      if ( this.reloadPath ) {
+        options.defaultPath = this.reloadPath
+      }
+
+      let response = await Neutralino.os.showFolderDialog(
+        'Select LaunchBox directory',
+        options
+      )
+
       if ( response ) {
         this.reloadPath = response
         const dm = new NeutralinoDirectoryManager(response)
@@ -65,7 +76,11 @@ export class RobustSelectDirectoryComponent {
     }
 
     // safari
-    this.showDirectoryPicker()
+    if ( this.showDirectoryPicker ) {
+      this.showDirectoryPicker()
+    }
+
+    throw new Error('Cannot find supporting functionality to display a directory picker')
   }
 
   getId() {
