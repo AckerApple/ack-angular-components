@@ -16,10 +16,6 @@ export async function readTextStream(
     const stats = await fs.getStats(filePath)
     const size = stats.size
 
-    if ( chunkSize > size ) {
-      chunkSize = size
-    }
-
     let close = () => {
       Neutralino.events.off('openedFile', dataCallback)
       res( undefined )
@@ -64,6 +60,12 @@ export async function readTextStream(
     // used at every time we are ready to continue reading
     const read = async () => {
       try {
+        const ableToRead = size - (offset + chunkSize)
+        // prevent a trying to read more than their is file (otherwise odd trailing characters)
+        if ( ableToRead < 0 ) {
+          chunkSize = chunkSize + ableToRead
+        }
+
         // no await here needed (dataCallback will be called)
         await Neutralino.filesystem.updateOpenedFile(fileId, 'read', chunkSize)
       } catch (err) {

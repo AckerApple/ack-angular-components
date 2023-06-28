@@ -97,7 +97,13 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
         var reader = new FileReader()
         const file = await this.getRealFile()
         reader.readAsDataURL(file)
-        reader.onload = () => res(reader.result as string)
+        reader.onload = () => {
+          const result = reader.result as string
+          // remove `data:application/json;base64,`
+          // remove `data:image/png;base64,`
+          // const replaced = result.replace(/^.+,/,'')
+          res(result)
+        }
       } catch (err) {
         rej(err)
       }

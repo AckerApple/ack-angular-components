@@ -37,11 +37,20 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
   }
   
   async readAsDataURL(): Promise<string> {
-    let data = await fs.readBinaryFile(this.filePath)
-    const view = new Uint8Array(data);
-    var decoder = new TextDecoder('utf8');
-    var b64encoded = btoa(decoder.decode(view))
-    return b64encoded
+    const data = await fs.readBinaryFile(this.filePath)
+    const view = new Uint8Array(data)
+    
+    const decoded = String.fromCharCode(...view)
+    //const decoder = new TextDecoder('utf8')
+    //const decoded = decoder.decode(view)
+    
+    const b64encoded = btoa(decoded)
+
+    const ext = this.filePath.split('.').pop() as string
+    const dataType = getMimeType(ext)
+
+    const url = `data:${dataType};base64,` + b64encoded // remove `application/json;base64,`
+    return url
   }
 
   /**
@@ -61,4 +70,16 @@ export class NeutralinoDmFileReader extends BaseDmFileReader implements DmFileRe
   async write(fileString: string | ArrayBuffer) {
     return fs.writeFile(this.filePath, fileString)
   }
+}
+
+function getMimeType(ext: string) {
+  switch (ext) {
+    case 'png':
+      return 'image/png'
+    case 'jpeg':
+    case 'jpg':
+      return 'image/png'
+  }
+
+  return 'application/json'
 }
