@@ -180,7 +180,13 @@ class BrowserDmFileReader extends BaseDmFileReader {
                 var reader = new FileReader();
                 const file = yield this.getRealFile();
                 reader.readAsDataURL(file);
-                reader.onload = () => res(reader.result);
+                reader.onload = () => {
+                    const result = reader.result;
+                    // remove `data:application/json;base64,`
+                    // remove `data:image/png;base64,`
+                    // const replaced = result.replace(/^.+,/,'')
+                    res(result);
+                };
             }
             catch (err) {
                 rej(err);
@@ -407,9 +413,6 @@ chunkSize = 1024 * 18) {
             let offset = 0;
             const stats = yield fs.getStats(filePath);
             const size = stats.size;
-            if (chunkSize > size) {
-                chunkSize = size;
-            }
             let close = () => {
                 Neutralino.events.off('openedFile', dataCallback);
                 res(undefined);
@@ -449,6 +452,11 @@ chunkSize = 1024 * 18) {
             // used at every time we are ready to continue reading
             const read = () => __awaiter(this, void 0, void 0, function* () {
                 try {
+                    const ableToRead = size - (offset + chunkSize);
+                    // prevent a trying to read more than their is file (otherwise odd trailing characters)
+                    if (ableToRead < 0) {
+                        chunkSize = chunkSize + ableToRead;
+                    }
                     // no await here needed (dataCallback will be called)
                     yield Neutralino.filesystem.updateOpenedFile(fileId, 'read', chunkSize);
                 }
@@ -527,11 +535,16 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
     }
     readAsDataURL() {
         return __awaiter(this, void 0, void 0, function* () {
-            let data = yield fs.readBinaryFile(this.filePath);
+            const data = yield fs.readBinaryFile(this.filePath);
             const view = new Uint8Array(data);
-            var decoder = new TextDecoder('utf8');
-            var b64encoded = btoa(decoder.decode(view));
-            return b64encoded;
+            const decoded = String.fromCharCode(...view);
+            //const decoder = new TextDecoder('utf8')
+            //const decoded = decoder.decode(view)
+            const b64encoded = btoa(decoded);
+            const ext = this.filePath.split('.').pop();
+            const dataType = getMimeType(ext);
+            const url = `data:${dataType};base64,` + b64encoded; // remove `application/json;base64,`
+            return url;
         });
     }
     /**
@@ -551,6 +564,16 @@ class NeutralinoDmFileReader extends BaseDmFileReader {
             return fs.writeFile(this.filePath, fileString);
         });
     }
+}
+function getMimeType(ext) {
+    switch (ext) {
+        case 'png':
+            return 'image/png';
+        case 'jpeg':
+        case 'jpg':
+            return 'image/png';
+    }
+    return 'application/json';
 }
 
 class NeutralinoDirectoryManager {
@@ -880,8 +903,13 @@ class RobustSelectDirectoryComponent {
             // safari
             if (this.showDirectoryPicker) {
                 this.showDirectoryPicker();
+                return;
             }
-            throw new Error('Cannot find supporting functionality to display a directory picker');
+            let message = 'Cannot find supporting functionality to display a directory picker.';
+            if (window.location.host.includes('0.0.0.0')) {
+                message = message + ' Try using localhost instead of 0.0.0.0';
+            }
+            throw new Error(message);
         });
     }
     getId() {
@@ -905,10 +933,10 @@ class RobustSelectDirectoryComponent {
     }
 }
 RobustSelectDirectoryComponent.ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "14.2.4", ngImport: i0, type: RobustSelectDirectoryComponent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-RobustSelectDirectoryComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "14.2.4", type: RobustSelectDirectoryComponent, selector: "robust-select-directory", inputs: { label: "label", pickerId: "pickerId", reloadPath: "reloadPath", directoryManager: "directoryManager" }, outputs: { error: "error", directoryManagerChange: "directoryManagerChange" }, ngImport: i0, template: "<!-- search hints: reselect -->\n\n<input class=\"hidden\" type=\"file\" directory accept=\".folder\" webkitdirectory\n  [id]=\"'robustFolderPicker-' + label\"\n  [name]=\"'robustFolderPicker-' + label\"\n  (change)=\"readInputDirectory($event.target)\"\n/>\n\n<button *ngIf=\"reloadPath\" type=\"button\" class=\"flex1\"\n  [title] = \"reloadPath\"\n  (click) = \"onPathReload(reloadPath)\"\n>\uD83D\uDD04 Reload</button>\n\n<button type=\"button\" class=\"flex1\"\n  (click)=\"selectPath()\"\n  [class.opacity-80] = \"directoryManager\"\n>\uD83D\uDCC1 {{ directoryManager ? 're' : '' }}select {{ label }} folder</button>\n\n<div *ngIf=\"reloadPath\" class=\"text-xs\">\n  <strong>{{ label }} path:</strong> {{ reloadPath }}\n</div>\n", dependencies: [{ kind: "directive", type: i1.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }] });
+RobustSelectDirectoryComponent.ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "14.2.4", type: RobustSelectDirectoryComponent, selector: "robust-select-directory", inputs: { label: "label", pickerId: "pickerId", reloadPath: "reloadPath", directoryManager: "directoryManager" }, outputs: { error: "error", directoryManagerChange: "directoryManagerChange" }, ngImport: i0, template: "<input class=\"hidden\" type=\"file\" directory accept=\".folder\" webkitdirectory\n  [id]=\"'robustFolderPicker-' + label\"\n  [name]=\"'robustFolderPicker-' + label\"\n  (change)=\"readInputDirectory($event.target)\"\n/>\n\n<button *ngIf=\"reloadPath\" type=\"button\" class=\"flex1\"\n  [title] = \"reloadPath\"\n  (click) = \"onPathReload(reloadPath)\"\n>\uD83D\uDD04 Reload</button>\n\n<button type=\"button\" class=\"flex1\"\n  (click)=\"selectPath()\"\n  [class.opacity-80] = \"directoryManager\"\n>\uD83D\uDCC1 {{ directoryManager ? 're' : '' }}select {{ label }} folder</button>\n\n<div *ngIf=\"reloadPath\" class=\"text-xs\">\n  <strong>{{ label }} path:</strong> {{ reloadPath }}\n</div>\n", dependencies: [{ kind: "directive", type: i1.NgIf, selector: "[ngIf]", inputs: ["ngIf", "ngIfThen", "ngIfElse"] }] });
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "14.2.4", ngImport: i0, type: RobustSelectDirectoryComponent, decorators: [{
             type: Component,
-            args: [{ selector: 'robust-select-directory', template: "<!-- search hints: reselect -->\n\n<input class=\"hidden\" type=\"file\" directory accept=\".folder\" webkitdirectory\n  [id]=\"'robustFolderPicker-' + label\"\n  [name]=\"'robustFolderPicker-' + label\"\n  (change)=\"readInputDirectory($event.target)\"\n/>\n\n<button *ngIf=\"reloadPath\" type=\"button\" class=\"flex1\"\n  [title] = \"reloadPath\"\n  (click) = \"onPathReload(reloadPath)\"\n>\uD83D\uDD04 Reload</button>\n\n<button type=\"button\" class=\"flex1\"\n  (click)=\"selectPath()\"\n  [class.opacity-80] = \"directoryManager\"\n>\uD83D\uDCC1 {{ directoryManager ? 're' : '' }}select {{ label }} folder</button>\n\n<div *ngIf=\"reloadPath\" class=\"text-xs\">\n  <strong>{{ label }} path:</strong> {{ reloadPath }}\n</div>\n" }]
+            args: [{ selector: 'robust-select-directory', template: "<input class=\"hidden\" type=\"file\" directory accept=\".folder\" webkitdirectory\n  [id]=\"'robustFolderPicker-' + label\"\n  [name]=\"'robustFolderPicker-' + label\"\n  (change)=\"readInputDirectory($event.target)\"\n/>\n\n<button *ngIf=\"reloadPath\" type=\"button\" class=\"flex1\"\n  [title] = \"reloadPath\"\n  (click) = \"onPathReload(reloadPath)\"\n>\uD83D\uDD04 Reload</button>\n\n<button type=\"button\" class=\"flex1\"\n  (click)=\"selectPath()\"\n  [class.opacity-80] = \"directoryManager\"\n>\uD83D\uDCC1 {{ directoryManager ? 're' : '' }}select {{ label }} folder</button>\n\n<div *ngIf=\"reloadPath\" class=\"text-xs\">\n  <strong>{{ label }} path:</strong> {{ reloadPath }}\n</div>\n" }]
         }], propDecorators: { label: [{
                 type: Input
             }], pickerId: [{
