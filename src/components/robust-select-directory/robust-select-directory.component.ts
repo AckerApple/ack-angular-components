@@ -78,9 +78,15 @@ export class RobustSelectDirectoryComponent {
     // safari
     if ( this.showDirectoryPicker ) {
       this.showDirectoryPicker()
+      return
     }
 
-    throw new Error('Cannot find supporting functionality to display a directory picker')
+    let message = 'Cannot find supporting functionality to display a directory picker.'
+    if ( window.location.host.includes('0.0.0.0') ) {
+      message = message + ' Try using localhost instead of 0.0.0.0'
+    }
+
+    throw new Error(message)
   }
 
   getId() {
