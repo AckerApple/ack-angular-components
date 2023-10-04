@@ -3,25 +3,32 @@ import { EventEmitter, Component, Input, Output, NgModule } from '@angular/core'
 import * as i1 from '@angular/common';
 import { CommonModule } from '@angular/common';
 
-/**  This function reads a file from the user's file system and returns an Observable that emits slices of the file
- * TODO: Needs an abort
-*/
+/**  This function reads a file from the user's file system and returns an Observable that emits slices of the file */
 function readFileStream(file, chunkSize = 1024 * 1024, // 1MB,
 eachString = (string) => undefined) {
     const fileSize = file.size;
     let offset = 0;
+    let stopped = false;
     return new Promise((res, rej) => {
         const reader = new FileReader();
+        const stop = () => {
+            stopped = true;
+            reader.abort();
+        };
+        const cancel = stop;
         reader.onload = (event) => {
             if (event.target?.result) {
-                const string = event.target.result;
-                const isLast = (offset + chunkSize) >= fileSize;
-                const percent = offset / fileSize * 100;
-                eachString(string, { isLast, percent, offset });
+                eachString(event.target.result, {
+                    isLast: (offset + chunkSize) >= fileSize,
+                    percent: offset / fileSize * 100,
+                    offset,
+                    stop,
+                    cancel
+                });
                 // increment
                 offset += chunkSize;
             }
-            if (offset < fileSize) {
+            if (!stopped && offset < fileSize) {
                 readSlice();
             }
             else {
@@ -37,19 +44,24 @@ eachString = (string) => undefined) {
         // return () => reader.abort()
     });
 }
-async function readWriteFile$1(file, fileHandle, transformFn, chunkSize = 1024 * 1024) {
+async function readWriteFile$1(file, fileHandle, transformFn, // aka callback
+chunkSize = 1024 * 1024) {
     const writableStream = await fileHandle.createWritable(); // Open a writable stream for the file
-    const onString = async (string, { isLast, percent, offset }) => {
-        const newString = await transformFn(string, {
-            isLast, percent, offset,
-        });
-        const result = {
-            string: newString, offset,
+    const onString = async (string, stats) => {
+        const originalStop = stats.stop;
+        stats.stop = () => {
+            originalStop(); // call the stop we are wrapping
+            writableStream.close();
         };
-        return writableStream.write(result.string);
+        stats.cancel = () => {
+            originalStop(); // call the stop we are wrapping
+            writableStream.abort();
+        };
+        return writableStream.write(await transformFn(string, stats));
     };
     await file.readTextStream(onString, chunkSize);
     await writableStream.close();
+    writableStream.truncate;
 }
 
 function stringToXml(string) {
@@ -196,11 +208,15 @@ async function findDirectoryWithin(path, inDir, options) {
     return inDir; // return last result
 }
 async function renameFileInDir(oldFileName, newFileName, dir) {
+    const newFile = await copyFileInDir(oldFileName, newFileName, dir);
+    await dir.removeEntry(oldFileName);
+    return newFile;
+}
+async function copyFileInDir(oldFileName, newFileName, dir) {
     const oldFile = await dir.file(oldFileName);
     const data = await oldFile.readAsText();
     const newFile = await dir.file(newFileName, { create: true });
     await newFile.write(data);
-    await dir.removeEntry(oldFileName);
     return newFile;
 }
 async function getDirForFilePath(path, fromDir, options) {
@@ -299,6 +315,9 @@ class BrowserDirectoryManager {
     async renameFile(oldFileName, newFileName) {
         return renameFileInDir(oldFileName, newFileName, this);
     }
+    async copyFile(oldFileName, newFileName) {
+        return copyFileInDir(oldFileName, newFileName, this);
+    }
     async file(path, options) {
         const findFile = await this.findFileByPath(path);
         if (findFile) {
@@ -344,6 +363,10 @@ const fs = typeof Neutralino === 'object' ? Neutralino.filesystem : {};
 async function readTextStream(filePath, callback, 
 // Below, if number is too low, Neutralino witnessed will fail NE_RT_NATRTER (hopefully its not a specific number used versus how much is available to stream in targeted file)
 chunkSize = 1024 * 18) {
+    let stopped = false;
+    const stop = () => {
+        stopped = true;
+    };
     return new Promise(async (res, rej) => {
         let offset = 0;
         const stats = await fs.getStats(filePath);
@@ -368,11 +391,11 @@ chunkSize = 1024 * 18) {
                     const string = evt.detail.data;
                     try {
                         // if callback return promise, wait for it
-                        return Promise.resolve(callback(string, { offset, isLast, percent }))
+                        return Promise.resolve(callback(string, { offset, isLast, percent, stop, cancel: stop }))
                             .then(() => {
                             offset = offset + chunkSize; // increase for next iteration
                             // are we done or shall we trigger the next read?
-                            isLast ? close() : read();
+                            isLast || stopped ? close() : read();
                         });
                     }
                     catch (err) {
@@ -420,10 +443,16 @@ chunkSize = 1024 * 18) {
 async function readWriteFile(filePath, callback, chunkSize = 1024 * 18 // Too low a number, can error. More details in file search for "chunkSize" in this file
 ) {
     const cloneFullPath = filePath + '.writing';
+    const renameFullPath = filePath + '.original';
     // create an empty file we will stream results into
     await Neutralino.filesystem.writeFile(cloneFullPath, '');
     // create callback that will handle each part of the stream
     const midware = (string, stats) => {
+        stats.cancel = () => {
+            stats.stop();
+            Neutralino.filesystem.removeFile(renameFullPath); // remove the safety file
+            Neutralino.filesystem.removeFile(cloneFullPath); // remove the clone.writing file we created
+        };
         const newString = callback(string, stats);
         // no await
         return Neutralino.filesystem.appendFile(cloneFullPath, newString);
@@ -431,11 +460,10 @@ async function readWriteFile(filePath, callback, chunkSize = 1024 * 18 // Too lo
     // stream the entire file
     await readTextStream(filePath, midware, chunkSize);
     // rename original file just incase any issues with next step(s)
-    const renameFullPath = filePath + '.original';
     await Neutralino.filesystem.moveFile(filePath, renameFullPath);
-    // rename the file we stream wrote
+    // rename the file we stream wrote which ends in ".writing"
     await Neutralino.filesystem.moveFile(cloneFullPath, filePath);
-    // delete original file because we are done
+    // delete original file because we are done which ends in '.original'
     await Neutralino.filesystem.removeFile(renameFullPath);
 }
 
@@ -603,6 +631,12 @@ class NeutralinoDirectoryManager {
         let fullFilePath = path.join(this.path, itemPath);
         return convertSlashes(fullFilePath);
     }
+    async copyFile(oldFileName, newFileName) {
+        const copyFrom = path.join(this.path, oldFileName);
+        const pasteTo = path.join(this.path, newFileName);
+        await Neutralino.filesystem.copyFile(copyFrom, pasteTo);
+        return await this.file(newFileName);
+    }
     async renameFile(oldFileName, newFileName) {
         return renameFileInDir(oldFileName, newFileName, this);
     }
@@ -648,6 +682,9 @@ class SafariDirectoryManager {
         this.path = path;
         this.files = files;
         this.name = getNameByPath(path);
+    }
+    async copyFile(oldFileName, newFileName) {
+        return copyFileInDir(oldFileName, newFileName, this);
     }
     async renameFile(oldFileName, newFileName) {
         return renameFileInDir(oldFileName, newFileName, this);

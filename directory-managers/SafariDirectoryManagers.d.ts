@@ -6,6 +6,7 @@ export declare class SafariDirectoryManager implements DirectoryManager {
     files: File[];
     name: string;
     constructor(path: string, files: File[]);
+    copyFile(oldFileName: string, newFileName: string): Promise<DmFileReader>;
     renameFile(oldFileName: string, newFileName: string): Promise<DmFileReader>;
     /** ⚠️ does not actually work */
     removeEntry(_name: string, _options?: {

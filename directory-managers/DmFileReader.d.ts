@@ -3,6 +3,8 @@ export interface StreamStats {
     offset: number;
     percent: number;
     isLast: boolean;
+    stop: () => unknown;
+    cancel: () => unknown;
 }
 export declare type streamCallback = (string: string, stats: StreamStats) => any;
 export interface DmFileReader {

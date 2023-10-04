@@ -4,26 +4,33 @@ import * as i1 from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { __awaiter, __asyncValues } from 'tslib';
 
-/**  This function reads a file from the user's file system and returns an Observable that emits slices of the file
- * TODO: Needs an abort
-*/
+/**  This function reads a file from the user's file system and returns an Observable that emits slices of the file */
 function readFileStream(file, chunkSize = 1024 * 1024, // 1MB,
 eachString = (string) => undefined) {
     const fileSize = file.size;
     let offset = 0;
+    let stopped = false;
     return new Promise((res, rej) => {
         const reader = new FileReader();
+        const stop = () => {
+            stopped = true;
+            reader.abort();
+        };
+        const cancel = stop;
         reader.onload = (event) => {
             var _a;
             if ((_a = event.target) === null || _a === void 0 ? void 0 : _a.result) {
-                const string = event.target.result;
-                const isLast = (offset + chunkSize) >= fileSize;
-                const percent = offset / fileSize * 100;
-                eachString(string, { isLast, percent, offset });
+                eachString(event.target.result, {
+                    isLast: (offset + chunkSize) >= fileSize,
+                    percent: offset / fileSize * 100,
+                    offset,
+                    stop,
+                    cancel
+                });
                 // increment
                 offset += chunkSize;
             }
-            if (offset < fileSize) {
+            if (!stopped && offset < fileSize) {
                 readSlice();
             }
             else {
@@ -39,20 +46,25 @@ eachString = (string) => undefined) {
         // return () => reader.abort()
     });
 }
-function readWriteFile$1(file, fileHandle, transformFn, chunkSize = 1024 * 1024) {
+function readWriteFile$1(file, fileHandle, transformFn, // aka callback
+chunkSize = 1024 * 1024) {
     return __awaiter(this, void 0, void 0, function* () {
         const writableStream = yield fileHandle.createWritable(); // Open a writable stream for the file
-        const onString = (string, { isLast, percent, offset }) => __awaiter(this, void 0, void 0, function* () {
-            const newString = yield transformFn(string, {
-                isLast, percent, offset,
-            });
-            const result = {
-                string: newString, offset,
+        const onString = (string, stats) => __awaiter(this, void 0, void 0, function* () {
+            const originalStop = stats.stop;
+            stats.stop = () => {
+                originalStop(); // call the stop we are wrapping
+                writableStream.close();
             };
-            return writableStream.write(result.string);
+            stats.cancel = () => {
+                originalStop(); // call the stop we are wrapping
+                writableStream.abort();
+            };
+            return writableStream.write(yield transformFn(string, stats));
         });
         yield file.readTextStream(onString, chunkSize);
         yield writableStream.close();
+        writableStream.truncate;
     });
 }
 
@@ -224,11 +236,17 @@ function findDirectoryWithin(path, inDir, options) {
 }
 function renameFileInDir(oldFileName, newFileName, dir) {
     return __awaiter(this, void 0, void 0, function* () {
+        const newFile = yield copyFileInDir(oldFileName, newFileName, dir);
+        yield dir.removeEntry(oldFileName);
+        return newFile;
+    });
+}
+function copyFileInDir(oldFileName, newFileName, dir) {
+    return __awaiter(this, void 0, void 0, function* () {
         const oldFile = yield dir.file(oldFileName);
         const data = yield oldFile.readAsText();
         const newFile = yield dir.file(newFileName, { create: true });
         yield newFile.write(data);
-        yield dir.removeEntry(oldFileName);
         return newFile;
     });
 }
@@ -359,6 +377,11 @@ class BrowserDirectoryManager {
             return renameFileInDir(oldFileName, newFileName, this);
         });
     }
+    copyFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return copyFileInDir(oldFileName, newFileName, this);
+        });
+    }
     file(path, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const findFile = yield this.findFileByPath(path);
@@ -409,6 +432,10 @@ function readTextStream(filePath, callback,
 // Below, if number is too low, Neutralino witnessed will fail NE_RT_NATRTER (hopefully its not a specific number used versus how much is available to stream in targeted file)
 chunkSize = 1024 * 18) {
     return __awaiter(this, void 0, void 0, function* () {
+        let stopped = false;
+        const stop = () => {
+            stopped = true;
+        };
         return new Promise((res, rej) => __awaiter(this, void 0, void 0, function* () {
             let offset = 0;
             const stats = yield fs.getStats(filePath);
@@ -433,11 +460,11 @@ chunkSize = 1024 * 18) {
                         const string = evt.detail.data;
                         try {
                             // if callback return promise, wait for it
-                            return Promise.resolve(callback(string, { offset, isLast, percent }))
+                            return Promise.resolve(callback(string, { offset, isLast, percent, stop, cancel: stop }))
                                 .then(() => {
                                 offset = offset + chunkSize; // increase for next iteration
                                 // are we done or shall we trigger the next read?
-                                isLast ? close() : read();
+                                isLast || stopped ? close() : read();
                             });
                         }
                         catch (err) {
@@ -487,10 +514,16 @@ function readWriteFile(filePath, callback, chunkSize = 1024 * 18 // Too low a nu
 ) {
     return __awaiter(this, void 0, void 0, function* () {
         const cloneFullPath = filePath + '.writing';
+        const renameFullPath = filePath + '.original';
         // create an empty file we will stream results into
         yield Neutralino.filesystem.writeFile(cloneFullPath, '');
         // create callback that will handle each part of the stream
         const midware = (string, stats) => {
+            stats.cancel = () => {
+                stats.stop();
+                Neutralino.filesystem.removeFile(renameFullPath); // remove the safety file
+                Neutralino.filesystem.removeFile(cloneFullPath); // remove the clone.writing file we created
+            };
             const newString = callback(string, stats);
             // no await
             return Neutralino.filesystem.appendFile(cloneFullPath, newString);
@@ -498,11 +531,10 @@ function readWriteFile(filePath, callback, chunkSize = 1024 * 18 // Too low a nu
         // stream the entire file
         yield readTextStream(filePath, midware, chunkSize);
         // rename original file just incase any issues with next step(s)
-        const renameFullPath = filePath + '.original';
         yield Neutralino.filesystem.moveFile(filePath, renameFullPath);
-        // rename the file we stream wrote
+        // rename the file we stream wrote which ends in ".writing"
         yield Neutralino.filesystem.moveFile(cloneFullPath, filePath);
-        // delete original file because we are done
+        // delete original file because we are done which ends in '.original'
         yield Neutralino.filesystem.removeFile(renameFullPath);
     });
 }
@@ -699,6 +731,14 @@ class NeutralinoDirectoryManager {
         let fullFilePath = path.join(this.path, itemPath);
         return convertSlashes(fullFilePath);
     }
+    copyFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const copyFrom = path.join(this.path, oldFileName);
+            const pasteTo = path.join(this.path, newFileName);
+            yield Neutralino.filesystem.copyFile(copyFrom, pasteTo);
+            return yield this.file(newFileName);
+        });
+    }
     renameFile(oldFileName, newFileName) {
         return __awaiter(this, void 0, void 0, function* () {
             return renameFileInDir(oldFileName, newFileName, this);
@@ -750,6 +790,11 @@ class SafariDirectoryManager {
         this.path = path;
         this.files = files;
         this.name = getNameByPath(path);
+    }
+    copyFile(oldFileName, newFileName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return copyFileInDir(oldFileName, newFileName, this);
+        });
     }
     renameFile(oldFileName, newFileName) {
         return __awaiter(this, void 0, void 0, function* () {
