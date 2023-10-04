@@ -12,54 +12,47 @@ export function readFileStream(
   let stopped = false
 
   return new Promise<void>((res, rej) => {
-    const reader = new FileReader()
-
     const stop = () => {
       stopped = true
-      reader.abort()
     }
     const cancel = stop
   
     /** onload means when data loaded not just the first time */
-    reader.onload = async (event) => {
-      if (event.target?.result) {        
-        const promise = eachString(
-          event.target.result as string, {
-            isLast: (offset + chunkSize) >= fileSize,
-            percent: offset / fileSize * 100,
-            offset,
-            stop,
-            cancel
-          }
-        )
-
-        if ( awaitEach ) {
-          await promise
+    const onread = async (result: string) => {
+      const promise = eachString(
+        result as string, {
+          isLast: (offset + chunkSize) >= fileSize,
+          percent: offset / fileSize * 100,
+          offset,
+          stop,
+          cancel
         }
-        
-        // increment
-        offset += chunkSize
-      }
+      )
 
-      if (!stopped && offset < fileSize) {
-        readSlice()
-      } else {
-        res()
+      if ( awaitEach ) {
+        await promise
       }
+      
+      // increment
+      offset += chunkSize
     }
 
-    reader.onerror = rej
+    if (!stopped && offset < fileSize) {
+      readSlice()
+    } else {
+      res()
+    }
 
     function readSlice() {
-      const slice = file.slice(offset, offset + chunkSize)
-      reader.readAsText(slice)
+      const slice = file.slice(offset, offset + chunkSize) // comes back as Blob
+      
+      // convert Blob to string
+      slice.text().then(fileContent => onread(fileContent)).catch(e => rej(e))
     }
 
     readSlice()
-    // return () => reader.abort()
   })
 }
-
 
 export async function readWriteFile(
   file: DmFileReader,
