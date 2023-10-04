@@ -1,6 +1,6 @@
 {
   "name": "ack-angular-components",
-  "version": "4.1.33",
+  "version": "4.1.34",
   "description": "Extra special directives, components, providers and pipes to aide in tackling everyday interface development needs in Angular2",
   "main": "dist/index.js",
   "typings": "index.d.ts",

@@ -6,7 +6,7 @@ import { __awaiter, __asyncValues } from 'tslib';
 
 /**  This function reads a file from the user's file system and returns an Observable that emits slices of the file */
 function readFileStream(file, chunkSize = 1024 * 1024, // 1MB,
-eachString = (string) => undefined) {
+eachString = (string) => undefined, { awaitEach = false } = {}) {
     const fileSize = file.size;
     let offset = 0;
     let stopped = false;
@@ -17,16 +17,20 @@ eachString = (string) => undefined) {
             reader.abort();
         };
         const cancel = stop;
-        reader.onload = (event) => {
+        /** onload means when data loaded not just the first time */
+        reader.onload = (event) => __awaiter(this, void 0, void 0, function* () {
             var _a;
             if ((_a = event.target) === null || _a === void 0 ? void 0 : _a.result) {
-                eachString(event.target.result, {
+                const promise = eachString(event.target.result, {
                     isLast: (offset + chunkSize) >= fileSize,
                     percent: offset / fileSize * 100,
                     offset,
                     stop,
                     cancel
                 });
+                if (awaitEach) {
+                    yield promise;
+                }
                 // increment
                 offset += chunkSize;
             }
@@ -36,7 +40,7 @@ eachString = (string) => undefined) {
             else {
                 res();
             }
-        };
+        });
         reader.onerror = rej;
         function readSlice() {
             const slice = file.slice(offset, offset + chunkSize);
@@ -47,7 +51,8 @@ eachString = (string) => undefined) {
     });
 }
 function readWriteFile$1(file, fileHandle, transformFn, // aka callback
-chunkSize = 1024 * 1024) {
+chunkSize = 1024 * 1024, // 1 MB
+options) {
     return __awaiter(this, void 0, void 0, function* () {
         const writableStream = yield fileHandle.createWritable(); // Open a writable stream for the file
         const onString = (string, stats) => __awaiter(this, void 0, void 0, function* () {
@@ -62,7 +67,7 @@ chunkSize = 1024 * 1024) {
             };
             return writableStream.write(yield transformFn(string, stats));
         });
-        yield file.readTextStream(onString, chunkSize);
+        yield file.readTextStream(onString, chunkSize, options);
         yield writableStream.close();
         writableStream.truncate;
     });
@@ -121,16 +126,17 @@ class BrowserDmFileReader extends BaseDmFileReader {
             return this.getRealFile();
         });
     }
-    readTextStream(callback, chunkSize = 1024) {
+    readTextStream(callback, chunkSize = 1024, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const file = yield this.getRealFile();
-            return readFileStream(file, chunkSize, callback);
+            return readFileStream(file, chunkSize, callback, options);
         });
     }
-    readWriteTextStream(callback, chunkSize = 1024 * 1024) {
+    readWriteTextStream(callback, chunkSize = 1024 * 1024, // 1 MB
+    options) {
         return __awaiter(this, void 0, void 0, function* () {
             const handle = this.file;
-            return readWriteFile$1(this, handle, callback, chunkSize);
+            return readWriteFile$1(this, handle, callback, chunkSize, options);
         });
     }
     write(fileString) {

@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 
 /**  This function reads a file from the user's file system and returns an Observable that emits slices of the file */
 function readFileStream(file, chunkSize = 1024 * 1024, // 1MB,
-eachString = (string) => undefined) {
+eachString = (string) => undefined, { awaitEach = false } = {}) {
     const fileSize = file.size;
     let offset = 0;
     let stopped = false;
@@ -16,15 +16,19 @@ eachString = (string) => undefined) {
             reader.abort();
         };
         const cancel = stop;
-        reader.onload = (event) => {
+        /** onload means when data loaded not just the first time */
+        reader.onload = async (event) => {
             if (event.target?.result) {
-                eachString(event.target.result, {
+                const promise = eachString(event.target.result, {
                     isLast: (offset + chunkSize) >= fileSize,
                     percent: offset / fileSize * 100,
                     offset,
                     stop,
                     cancel
                 });
+                if (awaitEach) {
+                    await promise;
+                }
                 // increment
                 offset += chunkSize;
             }
@@ -45,7 +49,8 @@ eachString = (string) => undefined) {
     });
 }
 async function readWriteFile$1(file, fileHandle, transformFn, // aka callback
-chunkSize = 1024 * 1024) {
+chunkSize = 1024 * 1024, // 1 MB
+options) {
     const writableStream = await fileHandle.createWritable(); // Open a writable stream for the file
     const onString = async (string, stats) => {
         const originalStop = stats.stop;
@@ -59,7 +64,7 @@ chunkSize = 1024 * 1024) {
         };
         return writableStream.write(await transformFn(string, stats));
     };
-    await file.readTextStream(onString, chunkSize);
+    await file.readTextStream(onString, chunkSize, options);
     await writableStream.close();
     writableStream.truncate;
 }
@@ -104,13 +109,14 @@ class BrowserDmFileReader extends BaseDmFileReader {
     async stats() {
         return this.getRealFile();
     }
-    async readTextStream(callback, chunkSize = 1024) {
+    async readTextStream(callback, chunkSize = 1024, options) {
         const file = await this.getRealFile();
-        return readFileStream(file, chunkSize, callback);
+        return readFileStream(file, chunkSize, callback, options);
     }
-    async readWriteTextStream(callback, chunkSize = 1024 * 1024) {
+    async readWriteTextStream(callback, chunkSize = 1024 * 1024, // 1 MB
+    options) {
         const handle = this.file;
-        return readWriteFile$1(this, handle, callback, chunkSize);
+        return readWriteFile$1(this, handle, callback, chunkSize, options);
     }
     async write(fileString) {
         let writableStream;

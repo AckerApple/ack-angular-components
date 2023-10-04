@@ -7,13 +7,18 @@ export interface StreamStats {
     cancel: () => unknown;
 }
 export declare type streamCallback = (string: string, stats: StreamStats) => any;
+export interface StreamOptions {
+    awaitEach?: boolean;
+}
 export interface DmFileReader {
     directory: DirectoryManager;
     name: string;
     write: (fileString: string | ArrayBuffer) => Promise<void>;
-    readWriteTextStream: (callback: streamCallback, chunkSize?: number) => Promise<void>;
+    readWriteTextStream: (callback: streamCallback, chunkSize?: number, // 1 MB should be default
+    options?: StreamOptions) => Promise<void>;
     readAsText: () => Promise<string>;
-    readTextStream: (callback: streamCallback, chunkSize?: number) => Promise<void>;
+    readTextStream: (callback: streamCallback, chunkSize?: number, // default 1024
+    options?: StreamOptions) => Promise<void>;
     readAsJson: () => Promise<Object>;
     readAsDataURL: () => Promise<string>;
     readAsXml: () => Promise<Document>;
