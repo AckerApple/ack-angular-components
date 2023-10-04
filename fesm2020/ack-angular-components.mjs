@@ -10,42 +10,37 @@ eachString = (string) => undefined, { awaitEach = false } = {}) {
     let offset = 0;
     let stopped = false;
     return new Promise((res, rej) => {
-        const reader = new FileReader();
         const stop = () => {
             stopped = true;
-            reader.abort();
         };
         const cancel = stop;
         /** onload means when data loaded not just the first time */
-        reader.onload = async (event) => {
-            if (event.target?.result) {
-                const promise = eachString(event.target.result, {
-                    isLast: (offset + chunkSize) >= fileSize,
-                    percent: offset / fileSize * 100,
-                    offset,
-                    stop,
-                    cancel
-                });
-                if (awaitEach) {
-                    await promise;
-                }
-                // increment
-                offset += chunkSize;
+        const onread = async (result) => {
+            const promise = eachString(result, {
+                isLast: (offset + chunkSize) >= fileSize,
+                percent: offset / fileSize * 100,
+                offset,
+                stop,
+                cancel
+            });
+            if (awaitEach) {
+                await promise;
             }
-            if (!stopped && offset < fileSize) {
-                readSlice();
-            }
-            else {
-                res();
-            }
+            // increment
+            offset += chunkSize;
         };
-        reader.onerror = rej;
+        if (!stopped && offset < fileSize) {
+            readSlice();
+        }
+        else {
+            res();
+        }
         function readSlice() {
-            const slice = file.slice(offset, offset + chunkSize);
-            reader.readAsText(slice);
+            const slice = file.slice(offset, offset + chunkSize); // comes back as Blob
+            // convert Blob to string
+            slice.text().then(fileContent => onread(fileContent)).catch(e => rej(e));
         }
         readSlice();
-        // return () => reader.abort()
     });
 }
 async function readWriteFile$1(file, fileHandle, transformFn, // aka callback
