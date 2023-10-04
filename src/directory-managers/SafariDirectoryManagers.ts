@@ -1,4 +1,4 @@
-import { DirectoryManager, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
+import { DirectoryManager, copyFileInDir, findDirectoryWithin, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { path } from "./path"
 import { DmFileReader } from "./DmFileReader"
 import { BrowserDmFileReader } from "./BrowserDmFileReader"
@@ -11,6 +11,13 @@ export class SafariDirectoryManager implements DirectoryManager {
     public files: File[],
   ) {
     this.name = getNameByPath(path)
+  }
+
+  async copyFile(
+    oldFileName: string,
+    newFileName: string
+  ) {
+    return copyFileInDir(oldFileName, newFileName, this)
   }
 
   async renameFile(

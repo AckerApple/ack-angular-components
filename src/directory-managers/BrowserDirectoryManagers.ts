@@ -1,5 +1,5 @@
 import { BrowserDmFileReader } from "./BrowserDmFileReader"
-import { DirectoryManager, findDirectoryWithin, getDirForFilePath, getNameByPath, renameFileInDir } from "./DirectoryManagers"
+import { copyFileInDir, DirectoryManager, findDirectoryWithin, getDirForFilePath, getNameByPath, renameFileInDir } from "./DirectoryManagers"
 import { directoryReadToArray } from "./directoryReadToArray.function"
 import { DmFileReader } from "./DmFileReader"
 import { path } from "./path"
@@ -109,6 +109,13 @@ export class BrowserDirectoryManager implements DirectoryManager {
     newFileName: string
   ): Promise<DmFileReader> {
     return renameFileInDir(oldFileName, newFileName, this)
+  }
+
+  async copyFile(
+    oldFileName: string,
+    newFileName: string
+  ): Promise<DmFileReader> {
+    return copyFileInDir(oldFileName, newFileName, this)
   }
 
   async file(

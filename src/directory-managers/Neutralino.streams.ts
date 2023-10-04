@@ -11,6 +11,11 @@ export async function readTextStream(
   // Below, if number is too low, Neutralino witnessed will fail NE_RT_NATRTER (hopefully its not a specific number used versus how much is available to stream in targeted file)
   chunkSize = 1024 * 18,
 ): Promise<void> {
+  let stopped = false
+  const stop = () => {
+    stopped = true
+  }
+
   return new Promise(async (res, rej) => {
     let offset = 0
     const stats = await fs.getStats(filePath)
@@ -40,12 +45,12 @@ export async function readTextStream(
                       
           try {
             // if callback return promise, wait for it
-            return Promise.resolve( callback(string, { offset, isLast, percent }) )
+            return Promise.resolve( callback(string, { offset, isLast, percent, stop, cancel: stop }) )
               .then(() => {
                 offset = offset + chunkSize // increase for next iteration
 
                 // are we done or shall we trigger the next read?
-                isLast ? close() : read()
+                isLast || stopped ? close() : read()
               })
           } catch (err) {
             rej(err)
@@ -99,12 +104,19 @@ export async function readWriteFile(
   chunkSize: number = 1024 * 18 // Too low a number, can error. More details in file search for "chunkSize" in this file
 ): Promise<void> {
   const cloneFullPath = filePath + '.writing'
+  const renameFullPath = filePath + '.original'
 
   // create an empty file we will stream results into
   await Neutralino.filesystem.writeFile(cloneFullPath, '')
 
   // create callback that will handle each part of the stream
   const midware: streamCallback = (string, stats) => {
+    stats.cancel = () => {
+      stats.stop()
+      Neutralino.filesystem.removeFile(renameFullPath) // remove the safety file
+      Neutralino.filesystem.removeFile(cloneFullPath) // remove the clone.writing file we created
+    }
+
     const newString = callback(string, stats)
     
     // no await
@@ -115,12 +127,11 @@ export async function readWriteFile(
   await readTextStream(filePath, midware, chunkSize)
 
   // rename original file just incase any issues with next step(s)
-  const renameFullPath = filePath + '.original'
   await Neutralino.filesystem.moveFile(filePath, renameFullPath)
 
-  // rename the file we stream wrote
+  // rename the file we stream wrote which ends in ".writing"
   await Neutralino.filesystem.moveFile(cloneFullPath, filePath)
 
-  // delete original file because we are done
+  // delete original file because we are done which ends in '.original'
   await Neutralino.filesystem.removeFile(renameFullPath)
 }

@@ -33,6 +33,7 @@ export interface INeutralinoFs {
   writeFile: (path: string, data: string | ArrayBuffer) => any
   appendFile: (path: string, data: string | ArrayBuffer) => any
   
+  copyFile: (fromPath: string, toPath: string) => any
   moveFile: (fromPath: string, toPath: string) => any
   removeFile: (path: string) => any
   removeDirectory: (path: string) => any

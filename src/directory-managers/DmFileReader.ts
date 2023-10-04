@@ -2,9 +2,11 @@ import { DirectoryManager, FileStats } from "./DirectoryManagers"
 import { stringToXml } from "./stringToXml.function.ts"
 
 export interface StreamStats {
-  offset: number,
-  percent: number,
+  offset: number
+  percent: number
   isLast: boolean
+  stop: () => unknown // a function to allow caller to call for a stop of file streaming. During file write this will cause an incomplete file (use cancel instead)
+  cancel: () => unknown // a function to allow caller to call for a stop of file streaming. During file write this will prevent writing an incomplete file
 }
 
 export type streamCallback = (

@@ -38,6 +38,12 @@ export interface DirectoryManager {
     options?: FileSystemGetFileOptions
   ) => Promise<DmFileReader>
 
+  copyFile: (
+    oldFileName: string,
+    newfileName: string,
+    options?: FileSystemGetFileOptions
+  ) => Promise<DmFileReader>
+
   removeEntry: (
     name: string,
     options?: { recursive: boolean }
@@ -91,11 +97,20 @@ export async function renameFileInDir(
   newFileName: string,
   dir: DirectoryManager
 ): Promise<DmFileReader> {
+  const newFile = await copyFileInDir(oldFileName, newFileName, dir)
+  await dir.removeEntry(oldFileName)
+  return newFile
+}
+
+export async function copyFileInDir(
+  oldFileName: string,
+  newFileName: string,
+  dir: DirectoryManager
+): Promise<DmFileReader> {
   const oldFile = await dir.file(oldFileName)
   const data = await oldFile.readAsText()
   const newFile = await dir.file(newFileName, { create: true })
   await newFile.write(data)
-  await dir.removeEntry(oldFileName)
   return newFile
 }
 

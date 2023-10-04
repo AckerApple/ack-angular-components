@@ -153,10 +153,20 @@ export class NeutralinoDirectoryManager implements DirectoryManager {
     return convertSlashes(fullFilePath)
   }
 
-  async renameFile(
+  async copyFile(
     oldFileName: string,
     newFileName: string
   ) {
+    const copyFrom = path.join(this.path, oldFileName)
+    const pasteTo = path.join(this.path, newFileName)
+    await Neutralino.filesystem.copyFile(copyFrom, pasteTo)
+    return await this.file(newFileName)
+  }
+
+  async renameFile(
+    oldFileName: string,
+    newFileName: string
+  ): Promise<DmFileReader> {
     return renameFileInDir(oldFileName, newFileName, this)
   }
 
