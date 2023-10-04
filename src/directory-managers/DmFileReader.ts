@@ -14,6 +14,10 @@ export type streamCallback = (
   stats: StreamStats
 ) => any
 
+export interface StreamOptions {
+  awaitEach?: boolean
+}
+
 export interface DmFileReader {
   directory: DirectoryManager
   name: string
@@ -22,6 +26,7 @@ export interface DmFileReader {
   readWriteTextStream: (
     callback: streamCallback,
     chunkSize?: number, // 1 MB should be default
+    options?: StreamOptions
   ) => Promise<void>
   
 
@@ -29,6 +34,7 @@ export interface DmFileReader {
   readTextStream: (
     callback: streamCallback,
     chunkSize?: number, // default 1024
+    options?: StreamOptions
   ) => Promise<void>
   readAsJson: () => Promise<Object>
   readAsDataURL: () => Promise<string>

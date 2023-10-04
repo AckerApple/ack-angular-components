@@ -1,10 +1,11 @@
-import { DmFileReader, streamCallback, StreamStats } from "./DmFileReader"
+import { DmFileReader, streamCallback, StreamOptions, StreamStats } from "./DmFileReader"
 
 /**  This function reads a file from the user's file system and returns an Observable that emits slices of the file */
 export function readFileStream(
   file: File,
   chunkSize: number = 1024 * 1024, // 1MB,
-  eachString: streamCallback = (string: string) => undefined
+  eachString: streamCallback = (string: string) => undefined,
+  {awaitEach=false}: StreamOptions = {}
 ): Promise<void> {
   const fileSize = file.size
   let offset = 0
@@ -19,9 +20,10 @@ export function readFileStream(
     }
     const cancel = stop
   
-    reader.onload = (event) => {
+    /** onload means when data loaded not just the first time */
+    reader.onload = async (event) => {
       if (event.target?.result) {        
-        eachString(
+        const promise = eachString(
           event.target.result as string, {
             isLast: (offset + chunkSize) >= fileSize,
             percent: offset / fileSize * 100,
@@ -30,6 +32,10 @@ export function readFileStream(
             cancel
           }
         )
+
+        if ( awaitEach ) {
+          await promise
+        }
         
         // increment
         offset += chunkSize
@@ -63,6 +69,7 @@ export async function readWriteFile(
     stats: StreamStats
   ) => string, // aka callback
   chunkSize = 1024 * 1024, // 1 MB
+  options?: StreamOptions
 ): Promise<void> {
   const writableStream = await fileHandle.createWritable() // Open a writable stream for the file
   const onString: streamCallback = async (string, stats) => {
@@ -81,7 +88,7 @@ export async function readWriteFile(
     )
   }
   
-  await file.readTextStream(onString, chunkSize)
+  await file.readTextStream(onString, chunkSize, options)
   await writableStream.close()
   writableStream.truncate
 }

@@ -1,5 +1,5 @@
 import { readFileStream, readWriteFile } from "./readFileStream.function"
-import { BaseDmFileReader, DmFileReader, streamCallback } from "./DmFileReader"
+import { BaseDmFileReader, DmFileReader, StreamOptions, streamCallback } from "./DmFileReader"
 import { DirectoryManager } from "./DirectoryManagers"
 
 export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReader {
@@ -20,17 +20,19 @@ export class BrowserDmFileReader extends BaseDmFileReader implements DmFileReade
   async readTextStream(
     callback: streamCallback,
     chunkSize: number = 1024,
+    options?: StreamOptions,
   ): Promise<void> {
     const file = await this.getRealFile()
-    return readFileStream(file, chunkSize, callback)
+    return readFileStream(file, chunkSize, callback, options)
   }
 
   async readWriteTextStream(
     callback: streamCallback,
     chunkSize: number = 1024 * 1024, // 1 MB
+    options?: StreamOptions,
   ): Promise<void> {
     const handle = this.file as FileSystemFileHandle
-    return readWriteFile(this, handle, callback, chunkSize)
+    return readWriteFile(this, handle, callback, chunkSize, options)
   }
 
   async write(fileString: string | ArrayBuffer) {
