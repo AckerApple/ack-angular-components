@@ -35,13 +35,14 @@ export function readFileStream(
       
       // increment
       offset += chunkSize
+ 
+      if (!stopped && offset < fileSize) {
+        readSlice()
+      } else {
+        res()
+      }
     }
 
-    if (!stopped && offset < fileSize) {
-      readSlice()
-    } else {
-      res()
-    }
 
     function readSlice() {
       const slice = file.slice(offset, offset + chunkSize) // comes back as Blob
